@@ -10,12 +10,14 @@ RUN if [ "${REINSTALL_CMAKE_VERSION_FROM_SOURCE}" != "none" ]; then \
     fi \
     && rm -f /tmp/reinstall-cmake.sh
 
-# install python packages
-RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-
 # [Optional] Uncomment this section to install additional vcpkg ports.
 # RUN su vscode -c "${VCPKG_ROOT}/vcpkg install <your-port-name-here>"
 
 # [Optional] Uncomment this section to install additional packages.
-# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-#     && apt-get -y install --no-install-recommends <your-package-list-here>
+RUN apt-get update \
+        && export DEBIAN_FRONTEND=noninteractive \
+        && apt-get -y install --no-install-recommends python3-pip \
+        && rm -rf /var/lib/apt/lists/*
+
+# install python packages
+RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
