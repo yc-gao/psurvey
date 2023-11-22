@@ -20,4 +20,6 @@ RUN apt-get update \
         && rm -rf /var/lib/apt/lists/*
 
 # install python packages
-RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu \
+        && pip3 install numpy pandas matplotlib seaborn \
+        && pip3 install opencv-python Pillow
