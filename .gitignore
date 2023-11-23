@@ -2,3 +2,5 @@ data
 *.pth
 
 build
+.cache
+
