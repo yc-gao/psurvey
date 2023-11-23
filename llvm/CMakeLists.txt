@@ -14,4 +14,5 @@ include_directories(${MLIR_INCLUDE_DIRS})
 
 add_subdirectory(ir-parser)
 add_subdirectory(module-maker)
+add_subdirectory(fibonacci)
 
