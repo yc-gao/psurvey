@@ -17,6 +17,6 @@ int main(int argc, char const *argv[]) {
   llvm::SMDiagnostic Err;
   std::unique_ptr<llvm::Module> module =
       llvm::parseIRFile(InputFile, Err, Context);
-  module->print(llvm::outs(), nullptr);
+  llvm::outs() << *module;
   return 0;
 }

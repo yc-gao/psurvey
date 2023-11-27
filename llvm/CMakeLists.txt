@@ -23,3 +23,4 @@ add_subdirectory(module-maker)
 add_subdirectory(fibonacci)
 add_subdirectory(passes)
 
+add_subdirectory(mlir-parser)
