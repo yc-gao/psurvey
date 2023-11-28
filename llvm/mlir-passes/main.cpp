@@ -2,7 +2,9 @@
 #include <string>
 
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Parser/Parser.h"
@@ -59,6 +61,7 @@ int main(int argc, char *argv[]) {
   mlir::PassManager pm(&context);
   pm.addPass(mlir::createConvertNVGPUToNVVMPass());
   pm.addPass(mlir::createConvertFuncToLLVMPass());
+  pm.addPass(mlir::createConvertVectorToLLVMPass());
   pm.addPass(createPrintOperatorPass());
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "run pm failed";

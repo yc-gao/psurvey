@@ -1,5 +1,6 @@
 #include <string>
 
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
@@ -42,6 +43,7 @@ int main(int argc, char *argv[]) {
   mlir::PassManager pm(&context);
   pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(mlir::createConvertNVGPUToNVVMPass());
+  pm.addPass(mlir::createConvertVectorToLLVMPass());
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "run passes failed";
     return 1;
