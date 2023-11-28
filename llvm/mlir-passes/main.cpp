@@ -1,6 +1,8 @@
 #include <memory>
 #include <string>
 
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Parser/Parser.h"
@@ -49,11 +51,14 @@ std::unique_ptr<PrintOperatorPass> createPrintOperatorPass() {
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  mlir::MLIRContext context;
-  mlir::registerAllDialects(context);
+  mlir::DialectRegistry registry;
+  mlir::registerAllDialects(registry);
+  mlir::MLIRContext context(registry);
 
   auto module = LoadMLIR(context, InputFile);
   mlir::PassManager pm(&context);
+  pm.addPass(mlir::createConvertNVGPUToNVVMPass());
+  pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(createPrintOperatorPass());
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "run pm failed";

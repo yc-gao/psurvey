@@ -1,5 +1,6 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
+get_property(translation_libs GLOBAL PROPERTY MLIR_TRANSLATION_LIBS)
 
 set(LLVM_LINK_COMPONENTS
   Core
@@ -12,5 +13,6 @@ llvm_update_compile_flags(mlir-passes)
 target_link_libraries(mlir-passes
     PRIVATE
     ${dialect_libs}
-    ${conversion_libs})
+    ${conversion_libs}
+    ${translation_libs})
 

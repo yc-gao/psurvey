@@ -6,6 +6,7 @@
 #include "mlir/InitAllTranslations.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
@@ -32,13 +33,15 @@ mlir::OwningOpRef<mlir::ModuleOp> LoadMLIR(mlir::MLIRContext &context,
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  mlir::MLIRContext context;
-  mlir::registerAllDialects(context);
-  mlir::registerLLVMDialectTranslation(context);
+  mlir::DialectRegistry registry;
+  mlir::registerAllDialects(registry);
+  mlir::registerAllToLLVMIRTranslations(registry);
+  mlir::MLIRContext context(registry);
 
   auto module = LoadMLIR(context, InputFile);
   mlir::PassManager pm(&context);
   pm.addPass(mlir::createConvertFuncToLLVMPass());
+  pm.addPass(mlir::createConvertNVGPUToNVVMPass());
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "run passes failed";
     return 1;
