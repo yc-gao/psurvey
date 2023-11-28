@@ -1,0 +1,63 @@
+#include <memory>
+#include <string>
+
+#include "mlir/IR/Dialect.h"
+#include "mlir/InitAllDialects.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/SourceMgr.h"
+
+namespace {
+llvm::cl::opt<std::string> InputFile(llvm::cl::Positional, llvm::cl::init("-"));
+}
+
+mlir::OwningOpRef<mlir::ModuleOp> LoadMLIR(mlir::MLIRContext &context,
+                                           std::string InputFile) {
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> fileOrErr =
+      llvm::MemoryBuffer::getFileOrSTDIN(InputFile);
+  if (std::error_code ec = fileOrErr.getError()) {
+    llvm::errs() << "Could not open input file: " << ec.message() << "\n";
+    return nullptr;
+  }
+  llvm::SourceMgr sourceMgr;
+  sourceMgr.AddNewSourceBuffer(std::move(*fileOrErr), llvm::SMLoc());
+  return mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
+}
+
+class PrintOperatorPass
+    : public mlir::PassWrapper<PrintOperatorPass,
+                               mlir::OperationPass<mlir::ModuleOp>> {
+public:
+  void runOnOperation() override {
+    // define Conversiion Tagrte
+    // define Rewrite Patterns
+    // maybe a Type Convertor
+    // Convert Target
+    auto op = getOperation();
+    llvm::outs() << "PrintOperatorPass\n";
+    llvm::outs() << *op;
+    markAllAnalysesPreserved();
+  }
+};
+
+std::unique_ptr<PrintOperatorPass> createPrintOperatorPass() {
+  return std::make_unique<PrintOperatorPass>();
+}
+
+int main(int argc, char *argv[]) {
+  llvm::cl::ParseCommandLineOptions(argc, argv);
+
+  mlir::MLIRContext context;
+  mlir::registerAllDialects(context);
+
+  auto module = LoadMLIR(context, InputFile);
+  mlir::PassManager pm(&context);
+  pm.addPass(createPrintOperatorPass());
+  if (mlir::failed(pm.run(*module))) {
+    llvm::errs() << "run pm failed";
+    return 1;
+  }
+  return 0;
+}

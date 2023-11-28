@@ -27,3 +27,4 @@ add_subdirectory(passes)
 
 add_subdirectory(mlir-parser)
 add_subdirectory(mlir-translator)
+add_subdirectory(mlir-passes)
