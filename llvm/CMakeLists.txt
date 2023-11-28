@@ -22,7 +22,7 @@ add_definitions(${LLVM_DEFINITIONS})
 
 add_subdirectory(ir-parser)
 add_subdirectory(module-maker)
-add_subdirectory(fibonacci)
+add_subdirectory(ljit-fibonacci)
 add_subdirectory(passes)
 
 add_subdirectory(mlir-parser)
