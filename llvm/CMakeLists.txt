@@ -26,3 +26,4 @@ add_subdirectory(fibonacci)
 add_subdirectory(passes)
 
 add_subdirectory(mlir-parser)
+add_subdirectory(mlir-translator)
