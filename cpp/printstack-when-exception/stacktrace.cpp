@@ -2,5 +2,4 @@
 
 #include <boost/stacktrace.hpp>
 
-void print_stack() { std::cout << boost::stacktrace::stacktrace(); }
-
+void print_stack() { std::cerr << boost::stacktrace::stacktrace(); }
