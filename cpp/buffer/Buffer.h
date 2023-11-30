@@ -85,6 +85,7 @@ public:
   size_type capacity() const { return buf_.size() - wpos_; }
   size_type size() const { return wpos_ - rpos_; }
   bool empty() const { return !size(); }
+  void clear() { rpos_ = wpos_ = 0; }
 
   Slice prepare(size_type size) {
     if (size > buf_.size() - wpos_) {
@@ -141,6 +142,7 @@ public:
   size_type capacity() const { return buf_.size() - wpos_; }
   size_type size() const { return wpos_ - rpos_; }
   bool empty() const { return !size(); }
+  void clear() { rpos_ = wpos_ = 0; }
 
   Slice prepare(size_type size) {
     if (size > buf_.size() - wpos_) {
@@ -228,6 +230,10 @@ public:
         [](size_type size, const auto &item) { return item->size() + size; });
   }
   bool empty() const { return !size(); }
+  void clear() {
+    reserved_.insert(commited_.begin(), commited_.end());
+    commited_.clear();
+  }
 
   Slice prepare(size_type size) {
     std::shared_ptr<ChunkImpl> chunk;
@@ -270,5 +276,38 @@ public:
     }
     reserved_.emplace(commited_.front());
     commited_.erase(commited_.begin());
+  }
+};
+
+template <typename C> class HistoryBuffer {
+  using size_type = std::size_t;
+  using data_type = std::uint8_t;
+
+  C buf_;
+
+  int count_{0};
+  int history_;
+
+public:
+  HistoryBuffer(int history) : history_(history) {}
+  size_type size() const { return buf_.size(); }
+  bool empty() const { return buf_.empty(); }
+  void clear() {
+    buf_.clear();
+    count_ = 0;
+  }
+
+  Slice prepare(size_type size) { return buf_.prepare(size); }
+  void commit(Slice slice) {
+    if (count_ >= history_) {
+      clear();
+    }
+    buf_.commit(std::move(slice));
+    count_++;
+  }
+  Slice data() { return buf_.data(); }
+  void consume(Slice slice) {
+    buf_.consume(std::move(slice));
+    count_--;
   }
 };

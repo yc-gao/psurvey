@@ -20,6 +20,14 @@ template <typename T> void check() {
     buf.consume(std::move(slice));
     assert(buf.empty());
   }
+  {
+    assert(buf.empty());
+    Slice slice = buf.prepare(5);
+    std::memcpy(slice.data(), "12345", slice.size());
+    buf.commit(std::move(slice));
+    buf.clear();
+    assert(buf.empty());
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -27,5 +35,6 @@ int main(int argc, char *argv[]) {
   check<DynamicBuffer<std::vector<char>>>();
   check<DynamicBuffer<std::string>>();
   check<DiscreteBuffer>();
+
   return 0;
 }
