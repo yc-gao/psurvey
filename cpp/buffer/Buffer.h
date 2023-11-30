@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <numeric>
+#include <queue>
 #include <set>
 #include <stdexcept>
 #include <vector>
@@ -33,10 +34,17 @@ class Slice {
 
 public:
   Slice() = default;
-  Slice(const Slice &) = default;
-  Slice(Slice &&) = default;
-  Slice &operator=(const Slice &) = default;
-  Slice &operator=(Slice &&) = default;
+  Slice(const Slice &other)
+      : chunk_(other.chunk_), data_(other.data_), size_(other.size_) {}
+  Slice(Slice &&other) {
+    Slice tmp;
+    swap(tmp, other);
+    swap(*this, tmp);
+  }
+  Slice &operator=(Slice other) {
+    swap(*this, other);
+    return *this;
+  }
 
   Slice(std::shared_ptr<Chunk> chunk) : Slice(chunk, 0, chunk->size()) {}
   Slice(std::shared_ptr<Chunk> chunk, size_type start, size_type size)
@@ -44,6 +52,13 @@ public:
     if (start + size > chunk_->size()) {
       throw std::invalid_argument("chunk overflow");
     }
+  }
+
+  friend void swap(Slice &lhs, Slice &rhs) {
+    using std::swap;
+    swap(lhs.chunk_, rhs.chunk_);
+    swap(lhs.data_, rhs.data_);
+    swap(lhs.size_, rhs.size_);
   }
 
   std::shared_ptr<Chunk> chunk() { return chunk_; }
@@ -279,35 +294,41 @@ public:
   }
 };
 
-template <typename C> class HistoryBuffer {
+template <typename C> class PacketBuffer {
   using size_type = std::size_t;
   using data_type = std::uint8_t;
 
   C buf_;
-
-  int count_{0};
-  int history_;
+  std::queue<Slice> packets_;
 
 public:
-  HistoryBuffer(int history) : history_(history) {}
-  size_type size() const { return buf_.size(); }
-  bool empty() const { return buf_.empty(); }
+  size_type size() const { return packets_.size(); }
+  bool empty() const { return !size(); }
   void clear() {
+    using std::swap;
+    {
+      std::queue<Slice> tmp;
+      swap(packets_, tmp);
+    }
     buf_.clear();
-    count_ = 0;
   }
 
   Slice prepare(size_type size) { return buf_.prepare(size); }
   void commit(Slice slice) {
-    if (count_ >= history_) {
-      clear();
-    }
-    buf_.commit(std::move(slice));
-    count_++;
+    buf_.commit(slice);
+    packets_.emplace(std::move(slice));
   }
-  Slice data() { return buf_.data(); }
+  Slice data() {
+    if (empty()) {
+      return {};
+    }
+    return packets_.front();
+  }
   void consume(Slice slice) {
+    if (slice != packets_.front()) {
+      throw std::logic_error("unknown slice");
+    }
+    packets_.pop();
     buf_.consume(std::move(slice));
-    count_--;
   }
 };

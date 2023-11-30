@@ -3,5 +3,5 @@ all: demo
 run: demo
 	./demo
 
-demo: demo.cc
-	$(CXX) -o $@ -g $^
+demo: demo.cc Buffer.h
+	$(CXX) -o $@ -g $<
