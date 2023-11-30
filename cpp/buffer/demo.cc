@@ -3,6 +3,7 @@
 #include <cstring>
 #include <vector>
 
+#include "BoundedPacketBuffer.h"
 #include "DynamicBuffer.h"
 #include "FixedBuffer.h"
 #include "PacketBuffer.h"
@@ -59,6 +60,36 @@ template <typename T> void check_packet() {
   }
 }
 
+template <typename T> void check_bounded() {
+  check_packet<T>();
+  T buf(3);
+  {
+    assert(buf.empty());
+    Slice slice = buf.prepare(5);
+    std::memcpy(slice.data(), "12345", slice.size());
+    buf.commit(std::move(slice));
+    assert(buf.size() == 1);
+  }
+  {
+    Slice slice = buf.prepare(5);
+    std::memcpy(slice.data(), "12345", slice.size());
+    buf.commit(std::move(slice));
+    assert(buf.size() == 2);
+  }
+  {
+    Slice slice = buf.prepare(5);
+    std::memcpy(slice.data(), "12345", slice.size());
+    buf.commit(std::move(slice));
+    assert(buf.size() == 3);
+  }
+  {
+    Slice slice = buf.prepare(5);
+    std::memcpy(slice.data(), "12345", slice.size());
+    buf.commit(std::move(slice));
+    assert(buf.size() == 3);
+  }
+}
+
 int main(int argc, char *argv[]) {
   check<FixedBuffer<1024>>();
   check<DynamicBuffer<std::vector<char>>>();
@@ -66,6 +97,9 @@ int main(int argc, char *argv[]) {
 
   check_packet<PacketBuffer<DynamicBuffer<std::string>>>();
   check_packet<PacketBuffer<DynamicBuffer<std::vector<char>>>>();
+
+  check_bounded<BoundedPacketBuffer<DynamicBuffer<std::string>>>();
+  check_bounded<BoundedPacketBuffer<DynamicBuffer<std::vector<char>>>>();
 
   return 0;
 }

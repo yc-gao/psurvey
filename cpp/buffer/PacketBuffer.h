@@ -9,7 +9,7 @@ template <typename T> class PacketBuffer : public Buffer {
   std::queue<size_type> packs_;
 
 public:
-  size_type capacity() const override { return buf_.capacity(); }
+  size_type capacity() const override { return -1; }
   size_type size() const override { return packs_.size(); }
   void clear() override {
     using std::swap;
