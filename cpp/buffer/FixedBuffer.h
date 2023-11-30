@@ -33,13 +33,13 @@ public:
     }
     return {std::make_shared<ChunkImpl>(buf_.data() + wpos_, size)};
   }
-  void commit(Slice slice) override { wpos_ += slice.chunk()->size(); }
+  void commit(Slice slice) override { wpos_ += slice.size(); }
 
   Slice data() override {
     return {std::make_shared<ChunkImpl>(buf_.data() + rpos_, wpos_ - rpos_)};
   }
   void consume(Slice slice) override {
-    rpos_ += slice.chunk()->size();
+    rpos_ += slice.size();
     if (rpos_ == wpos_) {
       rpos_ = wpos_ = 0;
     }
