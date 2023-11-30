@@ -1,8 +1,10 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <vector>
 
-#include "Buffer.h"
+#include "DynamicBuffer.h"
+#include "FixedBuffer.h"
 
 template <typename T> void check() {
   T buf;
@@ -60,9 +62,6 @@ int main(int argc, char *argv[]) {
   check<FixedBuffer<1024>>();
   check<DynamicBuffer<std::vector<char>>>();
   check<DynamicBuffer<std::string>>();
-  check<DiscreteBuffer>();
-
-  check_packet<PacketBuffer<DynamicBuffer<std::string>>>();
 
   return 0;
 }
