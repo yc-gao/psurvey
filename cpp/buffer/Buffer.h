@@ -87,51 +87,53 @@ public:
   bool empty() const { return !size(); }
 
   Slice prepare(size_type size) {
-    if (size + wpos_ > buf_.size()) {
-      throw std::invalid_argument("buf overflow");
+    if (size > buf_.size() - wpos_) {
+      throw std::out_of_range("buf overflow");
     }
     return {std::make_shared<ChunkImpl>(buf_.data() + wpos_, size)};
   }
-  void commit(Slice slice) {
-    std::shared_ptr<ChunkImpl> chunk =
-        std::dynamic_pointer_cast<ChunkImpl>(slice.chunk());
-    wpos_ += chunk->size();
-  }
+  void commit(Slice slice) { wpos_ += slice.chunk()->size(); }
 
   Slice data() {
-    if (rpos_ < wpos_) {
-      return {std::make_shared<ChunkImpl>(buf_.data() + rpos_, wpos_ - rpos_)};
-    }
-    return {};
+    return {std::make_shared<ChunkImpl>(buf_.data() + rpos_, wpos_ - rpos_)};
   }
   void consume(Slice slice) {
-    std::shared_ptr<ChunkImpl> chunk =
-        std::dynamic_pointer_cast<ChunkImpl>(slice.chunk());
-    rpos_ += chunk->size();
+    rpos_ += slice.chunk()->size();
     if (rpos_ == wpos_) {
       rpos_ = wpos_ = 0;
     }
   }
 };
 
-template <template <typename> typename C> class DynamicBuffer {
+template <typename C> class DynamicBuffer {
   using size_type = std::size_t;
   using data_type = std::uint8_t;
+
+  static constexpr size_type alignment = 4096;
+  // TODO:
+  static_assert(sizeof(data_type) == sizeof(typename C::value_type), "");
 
   class ChunkImpl : public Chunk {
     using size_type = std::size_t;
     using data_type = std::uint8_t;
 
-    data_type *data_;
+    C *buf_;
+    size_type start_;
     size_type size_;
 
   public:
-    ChunkImpl(data_type *data, size_type size) : data_(data), size_(size) {}
-    data_type *data() override { return data_; }
+    ChunkImpl(C *buf, size_type start, size_type size)
+        : buf_(buf), start_(start), size_(size) {}
+
+    data_type *data() override {
+      return const_cast<data_type *>(
+                 reinterpret_cast<const data_type *>(buf_->data())) +
+             start_;
+    }
     size_type size() const override { return size_; }
   };
 
-  C<data_type> buf_;
+  C buf_;
   size_type rpos_{0};
   size_type wpos_{0};
 
@@ -141,31 +143,20 @@ public:
   bool empty() const { return !size(); }
 
   Slice prepare(size_type size) {
-    if (size + wpos_ > buf_.size()) {
-      if (empty() || size + wpos_ <= buf_.capacity()) {
-        buf_.resize(size + wpos_);
-      } else {
-        throw std::invalid_argument("buf overflow");
-      }
+    if (size > buf_.size() - wpos_) {
+      size_type capacity = size + wpos_;
+      capacity = (capacity + alignment - 1) / alignment * alignment;
+      buf_.resize(capacity);
     }
-    return {std::make_shared<ChunkImpl>(buf_.data() + wpos_, size)};
+    return {std::make_shared<ChunkImpl>(&buf_, wpos_, size)};
   }
-  void commit(Slice slice) {
-    std::shared_ptr<ChunkImpl> chunk =
-        std::dynamic_pointer_cast<ChunkImpl>(slice.chunk());
-    wpos_ += chunk->size();
-  }
+  void commit(Slice slice) { wpos_ += slice.chunk()->size(); }
 
   Slice data() {
-    if (rpos_ < wpos_) {
-      return {std::make_shared<ChunkImpl>(buf_.data() + rpos_, wpos_ - rpos_)};
-    }
-    return {};
+    return {std::make_shared<ChunkImpl>(&buf_, rpos_, wpos_ - rpos_)};
   }
   void consume(Slice slice) {
-    std::shared_ptr<ChunkImpl> chunk =
-        std::dynamic_pointer_cast<ChunkImpl>(slice.chunk());
-    rpos_ += chunk->size();
+    rpos_ += slice.chunk()->size();
     if (rpos_ == wpos_) {
       rpos_ = wpos_ = 0;
     }
@@ -181,7 +172,7 @@ class DiscreteBuffer {
     using size_type = std::size_t;
     using data_type = std::uint8_t;
 
-    std::vector<data_type> content_;
+    std::vector<data_type> buf_;
     size_type capacity_{0};
     size_type size_{0};
 
@@ -193,30 +184,31 @@ class DiscreteBuffer {
         destruct_cb_();
       }
     }
+    void OnDestruct() {
+      using std::swap;
+      std::function<void()> tmp;
+      swap(tmp, destruct_cb_);
+    }
     template <typename F> void OnDestruct(F &&func) {
       destruct_cb_ = std::forward<F>(func);
     }
     friend void swap(ChunkImpl &lhs, ChunkImpl &rhs) {
       using std::swap;
-      swap(lhs.content_, rhs.content_);
+      swap(lhs.buf_, rhs.buf_);
       swap(lhs.capacity_, rhs.capacity_);
       swap(lhs.size_, rhs.size_);
       swap(lhs.destruct_cb_, rhs.destruct_cb_);
     }
     size_type capacity() const { return capacity_; }
     void resize(size_type size) {
-      if (size <= size_) {
-        return;
-      }
       size_ = size;
-      if (size <= capacity_) {
-        return;
+      if (size > capacity()) {
+        size = (size + alignment - 1) / alignment * alignment;
+        buf_.resize(size);
       }
-      size = (size + alignment - 1) / alignment * alignment;
-      content_.resize(size);
     }
 
-    data_type *data() override { return content_.data(); }
+    data_type *data() override { return buf_.data(); }
     size_type size() const override { return size_; }
   };
   struct ChunkCompare {
@@ -255,14 +247,14 @@ public:
     chunk->OnDestruct([this, chunk = chunk.get()]() {
       auto tmp = std::make_shared<ChunkImpl>();
       swap(*chunk, *tmp);
-      tmp->OnDestruct([]() {});
+      tmp->OnDestruct();
       reserved_.emplace(std::move(tmp));
     });
     return {chunk};
   }
   void commit(Slice slice) {
     auto chunk = std::dynamic_pointer_cast<ChunkImpl>(slice.chunk());
-    chunk->OnDestruct([]() {});
+    chunk->OnDestruct();
     commited_.emplace_back(std::move(chunk));
   }
   Slice data() {

@@ -1,36 +1,31 @@
 #include <algorithm>
 #include <cassert>
+#include <cstring>
 
 #include "Buffer.h"
 
+template <typename T> void check() {
+  T buf;
+  {
+    assert(buf.empty());
+    Slice slice = buf.prepare(5);
+    std::memcpy(slice.data(), "12345", slice.size());
+    buf.commit(std::move(slice));
+    assert(buf.size() == 5);
+  }
+  {
+    Slice slice = buf.data();
+    assert(slice.size() == 5);
+    assert(!std::memcmp(slice.data(), "12345", slice.size()));
+    buf.consume(std::move(slice));
+    assert(buf.empty());
+  }
+}
+
 int main(int argc, char *argv[]) {
-  FixedBuffer<1024> fixed_buf;
-  {
-    Slice slice = fixed_buf.prepare(512);
-    std::fill(slice.begin(), slice.end(), 1);
-    fixed_buf.commit(slice);
-  }
-
-  {
-    Slice slice = fixed_buf.data();
-    assert(fixed_buf.capacity() == 512);
-    assert(std::all_of(slice.begin(), slice.end(),
-                       [](const auto &item) { return item == 1; }));
-    fixed_buf.consume(std::move(slice));
-    assert(fixed_buf.capacity() == 1024);
-  }
-
-  DiscreteBuffer dis_buf;
-  {
-    Slice slice = dis_buf.prepare(512);
-    std::fill(slice.begin(), slice.end(), 1);
-    dis_buf.commit(slice);
-  }
-  {
-    Slice slice = dis_buf.data();
-    assert(std::all_of(slice.begin(), slice.end(),
-                       [](const auto &item) { return item == 1; }));
-    dis_buf.consume(std::move(slice));
-  }
+  check<FixedBuffer<1024>>();
+  check<DynamicBuffer<std::vector<char>>>();
+  check<DynamicBuffer<std::string>>();
+  check<DiscreteBuffer>();
   return 0;
 }

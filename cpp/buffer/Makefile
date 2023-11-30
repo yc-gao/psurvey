@@ -4,3 +4,4 @@ run: demo
 	./demo
 
 demo: demo.cc
+	$(CXX) -o $@ -g $^
