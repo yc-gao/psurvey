@@ -22,7 +22,10 @@ public:
     }
   }
 
-  Slice data() override { return buf_.data(); }
+  Slice data(size_type size = 0) override {
+    throw std::logic_error("unreachable code");
+    return {};
+  }
+  Slice packet() { return buf_.packet(); }
   void consume(Slice slice) override { return buf_.consume(std::move(slice)); }
 };
-

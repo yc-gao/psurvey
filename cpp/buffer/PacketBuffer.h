@@ -1,7 +1,8 @@
 #pragma once
+#include <queue>
+#include <stdexcept>
 
 #include "Buffer.h"
-#include <queue>
 
 template <typename T> class PacketBuffer : public Buffer {
   T buf_;
@@ -9,7 +10,10 @@ template <typename T> class PacketBuffer : public Buffer {
   std::queue<size_type> packs_;
 
 public:
-  size_type capacity() const override { return -1; }
+  size_type capacity() const override {
+    throw std::logic_error("unreachable code");
+    return -1;
+  }
   size_type size() const override { return packs_.size(); }
   void clear() override {
     using std::swap;
@@ -24,10 +28,11 @@ public:
     buf_.commit(std::move(slice));
   }
 
-  Slice data() override {
-    Slice tmp = buf_.data();
-    return {tmp.chunk(), 0, packs_.front()};
+  Slice data(size_type size = 0) override {
+    throw std::logic_error("unreachable code");
+    return {};
   }
+  Slice packet() { return buf_.data(packs_.front()); }
   void consume(Slice slice) override {
     packs_.pop();
     buf_.consume(std::move(slice));

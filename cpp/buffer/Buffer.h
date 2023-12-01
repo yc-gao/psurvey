@@ -1,29 +1,16 @@
 #pragma once
 
+#include <cstring>
 #include <functional>
 #include <memory>
+#include <vector>
 
 class Chunk {
-  std::function<void(void)> destruct_cb_;
-
 protected:
   using size_type = std::size_t;
   using data_type = std::uint8_t;
 
 public:
-  virtual ~Chunk() {
-    if (destruct_cb_)
-      destruct_cb_();
-  }
-  template <typename F> void OnDestruct(F &&func = []() {}) {
-    destruct_cb_ = std::forward<F>(func);
-  }
-
-  friend void swap(Chunk &lhs, Chunk &rhs) {
-    using std::swap;
-    swap(lhs.destruct_cb_, rhs.destruct_cb_);
-  }
-
   const data_type *data() const { return const_cast<Chunk *>(this)->data(); }
 
   virtual data_type *data() = 0;
@@ -55,13 +42,17 @@ public:
     return *this;
   }
 
-  Slice(std::shared_ptr<Chunk> chunk) : Slice(chunk, 0, chunk->size()) {}
+  Slice(std::shared_ptr<Chunk> chunk)
+      : Slice(chunk, (size_type)0, chunk->size()) {}
   Slice(std::shared_ptr<Chunk> chunk, size_type start, size_type size)
-      : chunk_(std::move(chunk)), data_(chunk_->data() + start), size_(size) {
-    if (start + size > chunk_->size()) {
-      throw std::out_of_range("chunk overflow");
-    }
-  }
+      : Slice(chunk, chunk->data() + start, size) {}
+
+  Slice(data_type *data, size_type start, size_type size)
+      : Slice(data + start, size) {}
+  Slice(data_type *data, size_type size) : Slice(nullptr, data, size) {}
+
+  Slice(std::shared_ptr<Chunk> chunk, data_type *data, size_type size)
+      : chunk_(std::move(chunk)), data_(data), size_(size) {}
 
   friend void swap(Slice &lhs, Slice &rhs) {
     using std::swap;
@@ -101,9 +92,37 @@ public:
   virtual size_type size() const = 0;
   virtual void clear() = 0;
 
+  virtual std::size_t write(const void *data, std::size_t size) {
+    Slice slice = prepare(size);
+    std::memcpy(slice.data(), data, slice.size());
+    commit(std::move(slice));
+    return size;
+  }
+
   virtual Slice prepare(size_type) = 0;
   virtual void commit(Slice) = 0;
 
-  virtual Slice data() = 0;
+  virtual Slice data(size_type = 0) = 0;
   virtual void consume(Slice) = 0;
+
+  template <typename T, typename = std::enable_if<std::is_pod<T>::value>>
+  friend Buffer &operator<<(Buffer &buffer, const T &val) {
+    buffer.write(&val, sizeof(val));
+    return buffer;
+  }
+  template <typename CharT, typename Traits, typename Allocator>
+  friend Buffer &
+  operator<<(Buffer &buffer,
+             const std::basic_string<CharT, Traits, Allocator> &val) {
+    buffer.write(val.data(), val.size());
+    return buffer;
+  }
+  template <typename T, typename Allocator>
+  friend Buffer &operator<<(Buffer &buffer,
+                            const std::vector<T, Allocator> &vals) {
+    for (auto &&v : vals) {
+      buffer << v;
+    }
+    return buffer;
+  }
 };

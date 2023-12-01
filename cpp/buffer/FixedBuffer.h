@@ -7,17 +7,6 @@
 #include "Buffer.h"
 
 template <std::size_t N> class FixedBuffer : public Buffer {
-  class ChunkImpl : public Chunk {
-    data_type *data_;
-    size_type size_;
-
-  public:
-    ChunkImpl(data_type *data, size_type size) : data_(data), size_(size) {}
-
-    data_type *data() { return data_; }
-    size_type size() const { return size_; }
-  };
-
   std::array<data_type, N> buf_;
   size_type wpos_{0};
   size_type rpos_{0};
@@ -31,12 +20,15 @@ public:
     if (size + wpos_ > buf_.size()) {
       throw std::out_of_range("buf overflow");
     }
-    return {std::make_shared<ChunkImpl>(buf_.data() + wpos_, size)};
+    return {buf_.data(), wpos_, size};
   }
   void commit(Slice slice) override { wpos_ += slice.size(); }
 
-  Slice data() override {
-    return {std::make_shared<ChunkImpl>(buf_.data() + rpos_, wpos_ - rpos_)};
+  Slice data(size_type size = 0) override {
+    if (size == 0) {
+      size = wpos_ - rpos_;
+    }
+    return {buf_.data(), rpos_, std::min(size, wpos_ - rpos_)};
   }
   void consume(Slice slice) override {
     rpos_ += slice.size();

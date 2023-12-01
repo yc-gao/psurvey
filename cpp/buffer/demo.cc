@@ -32,6 +32,13 @@ template <typename T> void check() {
     buf.clear();
     assert(buf.empty());
   }
+  {
+    buf << "1234";
+    assert(buf.size() == sizeof("1234"));
+    std::vector<int> vs{1, 2, 3};
+    buf << vs;
+    assert(buf.size() == sizeof("1234") + sizeof(int) * 3);
+  }
 }
 
 template <typename T> void check_packet() {
@@ -44,7 +51,7 @@ template <typename T> void check_packet() {
     assert(buf.size() == 1);
   }
   {
-    Slice slice = buf.data();
+    Slice slice = buf.packet();
     assert(slice.size() == 5);
     assert(!std::memcmp(slice.data(), "12345", slice.size()));
     buf.consume(std::move(slice));
