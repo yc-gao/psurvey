@@ -2,7 +2,7 @@
 #include <queue>
 #include <stdexcept>
 
-#include "Buffer.h"
+#include "common.h"
 
 template <typename T> class PacketBuffer : public Buffer {
   T buf_;

@@ -3,10 +3,7 @@
 #include <cstring>
 #include <vector>
 
-#include "BoundedPacketBuffer.h"
-#include "DynamicBuffer.h"
-#include "FixedBuffer.h"
-#include "PacketBuffer.h"
+#include "buffer.h"
 
 template <typename T> void check() {
   T buf;
