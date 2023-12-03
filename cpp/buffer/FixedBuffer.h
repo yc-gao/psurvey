@@ -1,49 +1,28 @@
 #pragma once
 
 #include <array>
-#include <cstddef>
-#include <memory>
+#include <cstdint>
 
-#include "common.h"
+#include "Buffer.h"
 
 template <std::size_t N> class FixedBuffer : public Buffer {
-  class ChunkImpl : public Chunk {
-    data_type *data_;
-    size_type size_;
-
-  public:
-    ChunkImpl(data_type *data, size_type size) : data_(data), size_(size) {}
-    data_type *data() { return data_; }
-    size_type size() const { return size_; }
-  };
-
-  std::array<data_type, N> buf_;
-  size_type wpos_{0};
-  size_type rpos_{0};
+  std::array<std::uint8_t, N> buf_;
+  std::size_t rpos_{0};
+  std::size_t wpos_{0};
 
 public:
-  size_type capacity() const override { return buf_.size() - wpos_; }
-  size_type size() const override { return wpos_ - rpos_; }
+  std::size_t size() const override { return wpos_ - rpos_; }
+  std::size_t capacity() const override { return buf_.size() - wpos_; }
   void clear() override { rpos_ = wpos_ = 0; }
 
-  Slice prepare(size_type size) override {
-    if (size + wpos_ > buf_.size()) {
-      throw std::out_of_range("buf overflow");
-    }
-    return {std::make_shared<ChunkImpl>(buf_.data() + wpos_, size)};
-  }
-  void commit(Slice slice) override { wpos_ += slice.size(); }
-
-  Slice data(size_type size = 0) override {
-    if (!size) {
-      size = wpos_ - rpos_;
-    }
-    return {std::make_shared<ChunkImpl>(buf_.data() + rpos_, size)};
-  }
-  void consume(Slice slice) override {
-    rpos_ += slice.size();
+  const void *data() const override { return buf_.data() + rpos_; }
+  void consume(std::size_t size) override {
+    rpos_ += size;
     if (rpos_ == wpos_) {
       rpos_ = wpos_ = 0;
     }
   }
+
+  void *prepare(std::size_t size) override { return buf_.data() + wpos_; }
+  void commit(std::size_t size) override { wpos_ += size; }
 };
