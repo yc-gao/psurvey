@@ -191,9 +191,19 @@ main() {
     do_main "$@"
     init_event_options
 
+    # cannot get userspace sym
     if [[ -n "$opt_stacktrace" ]]; then
-        echo 1 > $tracefs/options/stacktrace
-        run_atexit "echo 0 > $tracefs/options/stacktrace"
+        echo sym-offset > $tracefs/trace_options
+        run_atexit "echo nosym-offset > $tracefs/trace_options"
+
+        echo sym-addr > $tracefs/trace_options
+        run_atexit "echo nosym-addr > $tracefs/trace_options"
+
+        echo stacktrace > $tracefs/trace_options
+        run_atexit "echo nostacktrace > $tracefs/trace_options"
+
+        echo userstacktrace > $tracefs/trace_options
+        run_atexit "echo nouserstacktrace > $tracefs/trace_options"
     fi
 
     echo 1 > "$tracefs/tracing_on"
