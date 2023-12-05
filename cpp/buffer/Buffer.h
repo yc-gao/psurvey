@@ -4,11 +4,7 @@
 #include <cstring>
 #include <type_traits>
 
-class Buffer {
-public:
-  operator bool() const { return size(); }
-  bool empty() const { return !size(); }
-
+struct Buffer {
   virtual std::size_t size() const = 0;
   virtual std::size_t capacity() const = 0;
   virtual void clear() = 0;
@@ -18,6 +14,9 @@ public:
 
   virtual void *prepare(std::size_t) = 0;
   virtual void commit(std::size_t) = 0;
+
+  operator bool() const { return size(); }
+  bool empty() const { return !size(); }
 
   std::size_t write(const void *data, std::size_t size) {
     std::memcpy(prepare(size), data, size);

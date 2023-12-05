@@ -12,23 +12,22 @@ class Slice {
 public:
   Slice(void *data, std::size_t size) : data_(data), size_(size) {}
 
+  std::size_t size() const { return size_; }
   operator bool() const { return size(); }
   bool empty() const { return !size(); }
 
-  std::size_t size() const { return size_; }
   void *data() { return data_; }
   const void *data() const { return data_; }
 
-  Slice sub(std::size_t offset) {
-    return {reinterpret_cast<std::uint8_t *>(data_) + offset, size_ - offset};
-  }
-
-  Slice sub(std::size_t offset, std::size_t size) {
-    return {reinterpret_cast<std::uint8_t *>(data_) + offset, size};
+  auto begin() { return data(); }
+  auto end() { return reinterpret_cast<std::uint8_t *>(data()) + size(); }
+  auto begin() const { return data(); }
+  auto end() const {
+    return reinterpret_cast<const std::uint8_t *>(data()) + size();
   }
 };
 
-template <typename T> class PacketBuffer {
+template <typename T> class PackedBuffer {
   T buf_;
   std::deque<std::size_t> packs_;
 
