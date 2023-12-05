@@ -67,7 +67,7 @@ do_uprobe() {
             local addr
             prog="${uprobe[1]%:*}"
             sym="${uprobe[1]#*:}"
-            addr="$(get_addr "${sym}")"
+            addr="$(get_addr "${prog}" "${sym}")"
             uprobe[1]="${prog}:${addr}"
 
         fi
@@ -77,7 +77,7 @@ do_uprobe() {
         run_atexit "echo -:${uprobe[0]#*:} >> $tracefs/uprobe_events"
     done
 }
-uprobe_reset() {
+reset_uprobe() {
     echo > "$tracefs/uprobe_events"
 }
 
@@ -96,7 +96,7 @@ do_uprobe_enabled() {
             local addr
             prog="${uprobe[1]%:*}"
             sym="${uprobe[1]#*:}"
-            addr="$(get_addr "${sym}")"
+            addr="$(get_addr "${prog}" "${sym}")"
             uprobe[1]="${prog}:${addr}"
 
         fi
