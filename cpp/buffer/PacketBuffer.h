@@ -5,12 +5,12 @@
 
 #include "Buffer.h"
 
-class Slice {
+class Span {
   void *data_;
   std::size_t size_;
 
 public:
-  Slice(void *data, std::size_t size) : data_(data), size_(size) {}
+  Span(void *data, std::size_t size) : data_(data), size_(size) {}
 
   std::size_t size() const { return size_; }
   operator bool() const { return size(); }
@@ -41,22 +41,22 @@ public:
     packs_.clear();
   }
 
-  const Slice data() const { return {buf_.data(), packs_.front()}; }
-  void consume(Slice slice) {
-    buf_.consume(slice.size());
+  const Span data() const { return {buf_.data(), packs_.front()}; }
+  void consume(Span span) {
+    buf_.consume(span.size());
     packs_.pop_front();
   }
 
-  Slice prepare(std::size_t size) { return {buf_.prepare(size), size}; }
-  void commit(Slice slice) {
-    buf_.commit(slice.size());
-    packs_.push_back(slice.size());
+  Span prepare(std::size_t size) { return {buf_.prepare(size), size}; }
+  void commit(Span span) {
+    buf_.commit(span.size());
+    packs_.push_back(span.size());
   }
 
   std::size_t write(const void *data, std::size_t size) {
-    Slice slice = prepare(size);
-    std::memcpy(slice.data(), data, size);
-    commit(std::move(slice));
+    Span span = prepare(size);
+    std::memcpy(span.data(), data, size);
+    commit(std::move(span));
     return size;
   }
   template <typename U, typename = std::enable_if<std::is_pod<U>::value>>
