@@ -7,7 +7,6 @@ set(LLVM_LINK_COMPONENTS
 
 file(GLOB SRCS *.cpp)
 add_llvm_executable(mlir-parser ${SRCS})
-llvm_update_compile_flags(mlir-parser)
 
 target_link_libraries(mlir-parser
     PRIVATE

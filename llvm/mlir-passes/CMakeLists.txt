@@ -8,7 +8,6 @@ set(LLVM_LINK_COMPONENTS
 
 file(GLOB SRCS *.cpp)
 add_llvm_executable(mlir-passes ${SRCS})
-llvm_update_compile_flags(mlir-passes)
 
 target_link_libraries(mlir-passes
     PRIVATE
