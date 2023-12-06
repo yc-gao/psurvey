@@ -26,10 +26,8 @@ mlir::OwningOpRef<mlir::ModuleOp> LoadMLIR(mlir::MLIRContext &context,
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
-  mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);
-
-  mlir::MLIRContext context(registry);
+  mlir::MLIRContext context;
+  mlir::registerAllDialects(context);
 
   auto module = LoadMLIR(context, InputFile);
   llvm::outs() << *module;
