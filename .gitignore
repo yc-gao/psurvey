@@ -1,6 +1,3 @@
-data
-*.pth
-
 build
 .cache
 
