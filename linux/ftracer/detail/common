@@ -107,9 +107,6 @@ do_uprobe_enabled() {
     done
 }
 
-opt_help=
-opt_list=
-
 opt_duration=
 opt_stacktrace=
 
@@ -117,7 +114,22 @@ opt_pid=()
 opt_followfork=
 opt_filter=()
 
-init_event_options() {
+apply_options() {
+    # cannot get userspace sym
+    if [[ -n "$opt_stacktrace" ]]; then
+        echo sym-offset > $tracefs/trace_options
+        run_atexit "echo nosym-offset > $tracefs/trace_options"
+
+        echo sym-addr > $tracefs/trace_options
+        run_atexit "echo nosym-addr > $tracefs/trace_options"
+
+        echo stacktrace > $tracefs/trace_options
+        run_atexit "echo nostacktrace > $tracefs/trace_options"
+
+        echo userstacktrace > $tracefs/trace_options
+        run_atexit "echo nouserstacktrace > $tracefs/trace_options"
+    fi
+
     if (( ${#opt_pid[@]} )); then
         echo "${opt_pid[*]}" > "$tracefs/set_event_pid"
         run_atexit "echo > $tracefs/set_event_pid"
@@ -135,6 +147,7 @@ init_event_options() {
             run_atexit "echo 0 > $epath/filter"
         done
     fi
+
 }
 
 usage() {
@@ -145,12 +158,8 @@ main() {
     while (( $# )); do
         case "$1" in
             -h | --help)
-                opt_help=1
-                break
-                ;;
-            -l | --list)
-                opt_list=1
-                break
+                usage
+                exit
                 ;;
             -d | --duration)
                 opt_duration="$2"
@@ -178,33 +187,8 @@ main() {
         esac
     done
 
-    if [[ -n "$opt_help" ]]; then
-        usage
-        exit 0
-    fi
-
-    if [[ -n "$opt_list" ]]; then
-        cat "$tracefs/available_events"
-        exit 0
-    fi
-
     do_main "$@"
-    init_event_options
-
-    # cannot get userspace sym
-    if [[ -n "$opt_stacktrace" ]]; then
-        echo sym-offset > $tracefs/trace_options
-        run_atexit "echo nosym-offset > $tracefs/trace_options"
-
-        echo sym-addr > $tracefs/trace_options
-        run_atexit "echo nosym-addr > $tracefs/trace_options"
-
-        echo stacktrace > $tracefs/trace_options
-        run_atexit "echo nostacktrace > $tracefs/trace_options"
-
-        echo userstacktrace > $tracefs/trace_options
-        run_atexit "echo nouserstacktrace > $tracefs/trace_options"
-    fi
+    apply_options
 
     echo 1 > "$tracefs/tracing_on"
     run_atexit "echo 0 > $tracefs/tracing_on"
