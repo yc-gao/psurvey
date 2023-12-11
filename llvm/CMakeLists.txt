@@ -20,12 +20,12 @@ include_directories(${MLIR_INCLUDE_DIRS})
 
 add_definitions(${LLVM_DEFINITIONS})
 
-add_subdirectory(ir-parser)
-add_subdirectory(module-maker)
-add_subdirectory(ljit-fibonacci)
-add_subdirectory(passes)
+add_subdirectory(llvm-jit)
 
-add_subdirectory(mlir-parser)
-add_subdirectory(mlir-translator)
-add_subdirectory(mlir-passes)
-add_subdirectory(mlir-dialect)
+# add_subdirectory(module-maker)
+# add_subdirectory(passes)
+#
+# add_subdirectory(mlir-parser)
+# add_subdirectory(mlir-translator)
+# add_subdirectory(mlir-passes)
+# add_subdirectory(mlir-dialect)

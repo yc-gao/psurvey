@@ -7,6 +7,6 @@ set(LLVM_LINK_COMPONENTS
     MCJIT
     Interpreter)
 
-file(GLOB SRCS *.cpp)
-add_llvm_executable(fibonacci ${SRCS})
+file(GLOB SRCS *.cc)
+add_llvm_executable(llvm-jit ${SRCS})
 
