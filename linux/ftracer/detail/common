@@ -10,7 +10,9 @@ do_event() {
     local e
     for e in "$@"; do
         echo "$e" >> "$tracefs/set_event"
+        event_push "$e"
         run_atexit "echo '!$e' >> $tracefs/set_event"
+        run_atexit "event_pop"
     done
 }
 reset_event() {

@@ -50,3 +50,23 @@ run_once() {
     done
 }
 
+event_stack=()
+event_push() {
+    local e
+    for e in "$@"; do
+        event_stack+=("$e")
+    done
+}
+event_pop() {
+    event_stack=("${event_stack[@]:0:${#event_stack[@]} - 1}")
+}
+event_pfilter() {
+    local f="$1"
+    local e
+    for e in "${event_stack[@]}"; do
+        if [[ "$e" == "$f"* ]]; then
+            echo "$e"
+        fi
+    done
+}
+
