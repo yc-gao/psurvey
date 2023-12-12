@@ -17,17 +17,12 @@ reset_event() {
     echo > "$tracefs/set_event"
 }
 
-# do_kprobe 'p do_sys_open filename=+0(%si):string' 'p:myopen do_sys_open filename=+0(%si):string' ...
+# do_kprobe 'p:myopen do_sys_open filename=+0(%si):string' ...
 do_kprobe() {
     local k
     local kprobe
     for k in "$@"; do
        read -r -a kprobe <<< "$k"
-       if (( ${#kprobe[0]} == 1 )); then
-           kprobe[0]="${kprobe[0]}:${kprobe[1]}"
-       fi
-       k=$(join ' ' "${kprobe[@]}")
-
        do_run "echo '${k}' >> '$tracefs/kprobe_events'"
        run_atexit "echo -:${kprobe[0]#*:} >> $tracefs/kprobe_events"
     done
@@ -52,27 +47,12 @@ do_kprobe_enabled() {
     done
 }
 
-# do_uprobe 'p /bin/bash:0x4245c0' 'p:bash /bin/bash:0x4245c0' ...
+# do_uprobe 'p:bash /bin/bash:0x4245c0' ...
 do_uprobe() {
     local u
     local uprobe
     for u in "$@"; do
         read -r -a uprobe <<< "$u"
-        if (( ${#uprobe[0]} == 1 )); then
-            uprobe[0]="${uprobe[0]}:${uprobe[1]#*:}"
-        fi
-        if [[ "${uprobe[1]#*:}" != 0x* ]]; then
-            local prog
-            local sym
-            local addr
-            prog="${uprobe[1]%:*}"
-            sym="${uprobe[1]#*:}"
-            addr="$(get_addr "${prog}" "${sym}")"
-            uprobe[1]="${prog}:${addr}"
-
-        fi
-        u=$(join ' ' "${uprobe[@]}")
-
         do_run "echo '${u}' >> $tracefs/uprobe_events"
         run_atexit "echo -:${uprobe[0]#*:} >> $tracefs/uprobe_events"
     done
@@ -98,7 +78,6 @@ do_uprobe_enabled() {
             sym="${uprobe[1]#*:}"
             addr="$(get_addr "${prog}" "${sym}")"
             uprobe[1]="${prog}:${addr}"
-
         fi
         u=$(join ' ' "${uprobe[@]}")
 
