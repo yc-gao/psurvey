@@ -107,6 +107,10 @@ do_uprobe_enabled() {
     done
 }
 
+opt_events=()
+opt_uprobes=()
+opt_kprobes=()
+
 opt_duration=
 opt_stacktrace=
 
@@ -114,7 +118,15 @@ opt_pid=()
 opt_followfork=
 opt_filter=()
 
-apply_options() {
+usage() {
+    echo 'usage'
+}
+
+do_main() {
+    do_event "${opt_events[@]}"
+    do_uprobe_enabled "${opt_uprobes[@]}"
+    do_kprobe_enabled "${opt_kprobes[@]}"
+
     # cannot get userspace sym
     if [[ -n "$opt_stacktrace" ]]; then
         echo sym-offset > $tracefs/trace_options
@@ -147,11 +159,6 @@ apply_options() {
             run_atexit "echo 0 > $epath/filter"
         done
     fi
-
-}
-
-usage() {
-    echo 'usage'
 }
 
 main() {
@@ -181,14 +188,25 @@ main() {
                 opt_filter+=("$2")
                 shift 2
                 ;;
+            -u | --uprobe)
+                opt_uprobes+=("$2")
+                shift 2
+                ;;
+            -k | --kprobe)
+                opt_kprobes+=("$2")
+                shift 2
+                ;;
+            -e | --event)
+                opt_events+=("$2")
+                shift 2
+                ;;
             *)
                 break
                 ;;
         esac
     done
 
-    do_main "$@"
-    apply_options
+    do_main
 
     echo 1 > "$tracefs/tracing_on"
     run_atexit "echo 0 > $tracefs/tracing_on"
