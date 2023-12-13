@@ -133,14 +133,16 @@ do_main() {
         fi
     fi
 
-    if (( ${#opt_filter[@]} )); then
-        for f in "${opt_filter[@]}"; do
-            local e=${f%:*}
-            local epath="$tracefs/events/${e//://}"
-            echo "${f##*:}" > "$epath/filter"
-            run_atexit "echo 0 > $epath/filter"
-        done
-    fi
+    for f in "${opt_filter[@]}"; do
+        local e="$(event_pfind "$f")"
+        if [[ -z ${e} ]]; then
+            continue
+        fi
+        local filter="${f:${#e}+1}"
+        local epath="$tracefs/events/${e//://}"
+        echo "${filter}" > "$epath/filter"
+        run_atexit "echo 0 > $epath/filter"
+    done
 }
 
 main() {

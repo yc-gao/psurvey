@@ -60,12 +60,13 @@ event_push() {
 event_pop() {
     event_stack=("${event_stack[@]:0:${#event_stack[@]} - 1}")
 }
-event_pfilter() {
+event_pfind() {
     local f="$1"
     local e
     for e in "${event_stack[@]}"; do
-        if [[ "$e" == "$f"* ]]; then
+        if [[ "$f" == "$e"* ]]; then
             echo "$e"
+            break
         fi
     done
 }
