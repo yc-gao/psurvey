@@ -19,10 +19,9 @@ macro(bpf_object name)
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${objs}
         VERBATIM)
-    add_library(${name} INTERFACE)
+    add_library(${name} INTERFACE ${name}.skel.h)
     target_include_directories(${name} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
     target_link_libraries(${name} INTERFACE bpf elf z)
-    add_dependencies(${name} ${name}.skel.h)
 endmacro()
 
 bpf_object(example_bpf example.bpf.c)
