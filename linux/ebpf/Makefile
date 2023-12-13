@@ -8,10 +8,10 @@ all: $(APPS)
 clean:
 	rm -rf *.skel.h *.o $(APPS)
 
-example: example.cc example.skel.h
+example: example.cc example_bpf.skel.h
 	$(CXX) -o $@ $< -lbpf -lelf -lz
 
-example.skel.h: example.bpf.o
+example_bpf.skel.h: example.bpf.o
 	$(BPFTOOL) gen skeleton $< > $@
 
 example.bpf.o: example.bpf.tmp.o

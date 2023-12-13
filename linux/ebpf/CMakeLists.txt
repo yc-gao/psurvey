@@ -13,13 +13,20 @@ macro(bpf_object name)
             COMMAND ${CLANG} -target bpf -o ${obj} -c -g -O2 ${CMAKE_CURRENT_SOURCE_DIR}/${src}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     endforeach()
-    add_custom_target(${name}
+    add_custom_command(OUTPUT ${name}.skel.h
         COMMAND ${BPFTOOL} gen object ${name}.o ${objs}
         COMMAND ${BPFTOOL} gen skeleton ${name}.o > ${name}.skel.h
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS ${objs}
         VERBATIM)
+    add_library(${name} INTERFACE)
+    target_include_directories(${name} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
+    target_link_libraries(${name} INTERFACE bpf elf z)
+    add_dependencies(${name} ${name}.skel.h)
 endmacro()
 
-bpf_object(kprobe kprobe.bpf.c)
+bpf_object(example_bpf example.bpf.c)
+
+add_executable(example example.cc)
+target_link_libraries(example example_bpf)
 

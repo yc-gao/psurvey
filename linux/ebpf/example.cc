@@ -5,7 +5,7 @@
 #include <sys/resource.h>
 #include <unistd.h>
 
-#include "example.skel.h"
+#include "example_bpf.skel.h"
 
 static volatile sig_atomic_t stop;
 static void sig_int(int signo) { stop = 1; }
@@ -17,13 +17,13 @@ int main(int argc, char **argv) {
   }
 
   struct example_bpf *skel;
-  skel = example_bpf::open_and_load();
+  skel = example_bpf__open_and_load();
   if (!skel) {
     fprintf(stderr, "Failed to open/load BPF skeleton\n");
     return 1;
   }
 
-  if (example_bpf::attach(skel)) {
+  if (example_bpf__attach(skel)) {
     fprintf(stderr, "Failed to attach BPF skeleton\n");
     goto cleanup;
   }
@@ -35,8 +35,8 @@ int main(int argc, char **argv) {
     sleep(1);
   }
 
-  example_bpf::detach(skel);
+  example_bpf__detach(skel);
 cleanup:
-  example_bpf::destroy(skel);
+  example_bpf__destroy(skel);
   return 0;
 }
