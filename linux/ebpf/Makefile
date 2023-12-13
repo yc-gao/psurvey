@@ -8,6 +8,9 @@ all: $(APPS)
 clean:
 	rm -rf *.skel.h *.o $(APPS)
 
+vmlinux.h:
+	bpftool btf dump file /sys/kernel/btf/vmlinux format c > $@
+
 example: example.cc example_bpf.skel.h
 	$(CXX) -o $@ $< -lbpf -lelf -lz
 
