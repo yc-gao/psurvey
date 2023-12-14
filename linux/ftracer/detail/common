@@ -106,9 +106,9 @@ opt_trigger=()
 
 
 do_main() {
+    do_uprobe "${opt_uprobes[@]}"
+    do_kprobe "${opt_kprobes[@]}"
     do_event "${opt_events[@]}"
-    do_uprobe_enabled "${opt_uprobes[@]}"
-    do_kprobe_enabled "${opt_kprobes[@]}"
 
     # cannot get userspace sym
     if [[ -n "$opt_stacktrace" ]]; then
@@ -145,6 +145,7 @@ do_main() {
         local -r epath="$tracefs/events/${e//://}"
 
         if [ -e "${epath}/filter" ]; then
+            echo "apply event filter: '${f}'"
             echo "${filter}" > "$epath/filter"
             run_atexit "echo 0 > $epath/filter"
         fi
@@ -161,6 +162,7 @@ do_main() {
         local -r epath="$tracefs/events/${e//://}"
 
         if [ -e "${epath}/trigger" ]; then
+            echo "apply event filter: '${t}'"
             echo "${trigger}" > "$epath/trigger"
             run_atexit "echo '!${trigger}' > $epath/trigger"
         fi
