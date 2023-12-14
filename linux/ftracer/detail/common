@@ -9,8 +9,8 @@ tracefs="/sys/kernel/debug/tracing"
 do_event() {
     local e
     for e in "$@"; do
-        echo "$e" >> "$tracefs/set_event"
         event_push "$e"
+        echo "$e" >> "$tracefs/set_event"
         run_atexit "echo '!$e' >> $tracefs/set_event"
         run_atexit "event_pop"
     done
@@ -131,9 +131,9 @@ do_main() {
         if [ -z "${tmp[*]}" ]; then
             continue
         fi
-        local -r e="${tmp[0]}"
-        local -r filter="$(join ' ' "${tmp[@]:1}")"
-        local -r epath="$tracefs/events/${e//://}"
+        local e="${tmp[0]}"
+        local filter="$(join ' ' "${tmp[@]:1}")"
+        local epath="$tracefs/events/${e//://}"
 
         if [ -e "${epath}/filter" ]; then
             echo "apply event filter: '${f}'"
@@ -148,9 +148,9 @@ do_main() {
         if [ -z "${tmp[*]}" ]; then
             continue
         fi
-        local -r e="${tmp[0]}"
-        local -r trigger="$(join ' ' "${tmp[@]:1}")"
-        local -r epath="$tracefs/events/${e//://}"
+        local e="${tmp[0]}"
+        local trigger="$(join ' ' "${tmp[@]:1}")"
+        local epath="$tracefs/events/${e//://}"
 
         if [ -e "${epath}/trigger" ]; then
             echo "apply event filter: '${t}'"
