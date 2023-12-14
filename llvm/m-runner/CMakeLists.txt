@@ -18,6 +18,5 @@ target_link_libraries(m-runner PRIVATE
     MLIRIR
     MLIRParser
     ${dialect_libs}
-    ${conversion_libs}
     ${translation_libs})
 

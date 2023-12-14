@@ -52,7 +52,6 @@ int main(int argc, char *argv[]) {
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
-  mlir::registerAllPasses();
   mlir::registerAllToLLVMIRTranslations(registry);
   mlir::MLIRContext context(std::move(registry));
 
