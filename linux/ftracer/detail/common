@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2155
 
 self_dir=$(cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd)
 .   "$self_dir/utils"
@@ -22,8 +23,8 @@ reset_event() {
 # do_kprobe 'p:myopen do_sys_open filename=+0(%si):string' ...
 do_kprobe() {
     local k
-    local kprobe
     for k in "$@"; do
+        local kprobe
        read -r -a kprobe <<< "$k"
        do_run "echo '${k}' >> '$tracefs/kprobe_events'"
        run_atexit "echo -:${kprobe[0]#*:} >> $tracefs/kprobe_events"
@@ -36,8 +37,8 @@ reset_kprobe() {
 # do_kprobe_enabled 'p:name do_sys_open filename=+0(%si):string' 'p:myopen do_sys_open filename=+0(%si):string' ...
 do_kprobe_enabled() {
     local k
-    local kprobe
     for k in "$@"; do
+        local kprobe
         read -r -a kprobe <<< "$k"
         do_kprobe "$k"
         do_event "kprobes:${kprobe[0]#*:}"
@@ -47,16 +48,13 @@ do_kprobe_enabled() {
 # do_uprobe 'p:bash /bin/bash:0x4245c0' ...
 do_uprobe() {
     local u
-    local uprobe
     for u in "$@"; do
+        local uprobe
         read -r -a uprobe <<< "$u"
         if [[ "${uprobe[1]#*:}" != 0x* ]]; then
-            local prog
-            local sym
-            local addr
-            prog="${uprobe[1]%:*}"
-            sym="${uprobe[1]#*:}"
-            addr="$(get_addr "${prog}" "${sym}")"
+            local prog="${uprobe[1]%:*}"
+            local sym="${uprobe[1]#*:}"
+            local addr="$(get_addr "${prog}" "${sym}")"
             uprobe[1]="${prog}:${addr}"
         fi
         u=$(join ' ' "${uprobe[@]}")
@@ -71,8 +69,8 @@ reset_uprobe() {
 # do_uprobe_enabled 'p:asd /bin/bash:0x4245c0' 'p:bash /bin/bash:0x4245c0' ...
 do_uprobe_enabled() {
     local u
-    local uprobe
     for u in "$@"; do
+        local uprobe
         read -r -a uprobe <<< "$u"
         do_uprobe "$u"
         do_event "uprobes:${uprobe[0]#*:}"
