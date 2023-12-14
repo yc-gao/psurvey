@@ -112,17 +112,17 @@ do_main() {
 
     # cannot get userspace sym
     if [[ -n "$opt_stacktrace" ]]; then
-        echo sym-offset > $tracefs/trace_options
-        run_atexit "echo nosym-offset > $tracefs/trace_options"
-
-        echo sym-addr > $tracefs/trace_options
-        run_atexit "echo nosym-addr > $tracefs/trace_options"
-
         echo stacktrace > $tracefs/trace_options
         run_atexit "echo nostacktrace > $tracefs/trace_options"
 
         echo userstacktrace > $tracefs/trace_options
         run_atexit "echo nouserstacktrace > $tracefs/trace_options"
+
+        echo sym-offset > $tracefs/trace_options
+        run_atexit "echo nosym-offset > $tracefs/trace_options"
+
+        echo sym-addr > $tracefs/trace_options
+        run_atexit "echo nosym-addr > $tracefs/trace_options"
     fi
 
     if (( ${#opt_pid[@]} )); then
@@ -135,25 +135,35 @@ do_main() {
     fi
 
     for f in "${opt_filter[@]}"; do
-        local e="$(event_pfind "$f")"
-        if [[ -z ${e} ]]; then
+        local -a tmp
+        read -r -a tmp <<< "$f"
+        if [ -z "${tmp[*]}" ]; then
             continue
         fi
-        local filter="${f:${#e}+1}"
-        local epath="$tracefs/events/${e//://}"
-        echo "${filter}" > "$epath/filter"
-        run_atexit "echo 0 > $epath/filter"
+        local -r e="${tmp[0]}"
+        local -r filter="$(join ' ' "${tmp[@]:1}")"
+        local -r epath="$tracefs/events/${e//://}"
+
+        if [ -e "${epath}/filter" ]; then
+            echo "${filter}" > "$epath/filter"
+            run_atexit "echo 0 > $epath/filter"
+        fi
     done
 
     for t in "${opt_trigger[@]}"; do
-        local e="$(event_pfind "$t")"
-        if [[ -z ${e} ]]; then
+        local -a tmp
+        read -r -a tmp <<< "$t"
+        if [ -z "${tmp[*]}" ]; then
             continue
         fi
-        local trigger="${t:${#e}+1}"
-        local epath="$tracefs/events/${e//://}"
-        echo "${trigger}" > "$epath/trigger"
-        run_atexit "echo '!${trigger}' > $epath/trigger"
+        local -r e="${tmp[0]}"
+        local -r trigger="$(join ' ' "${tmp[@]:1}")"
+        local -r epath="$tracefs/events/${e//://}"
+
+        if [ -e "${epath}/trigger" ]; then
+            echo "${trigger}" > "$epath/trigger"
+            run_atexit "echo '!${trigger}' > $epath/trigger"
+        fi
     done
 }
 
