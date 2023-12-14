@@ -177,7 +177,7 @@ main() {
                 opt_pid+=("$2")
                 shift 2
                 ;;
-            -ff | --follow-fork)
+            --follow-fork)
                 opt_followfork=1
                 shift
                 ;;
@@ -185,19 +185,19 @@ main() {
                 opt_filter+=("$2")
                 shift 2
                 ;;
-            -t | --trigger)
+            --trigger)
                 opt_trigger+=("$2")
                 shift 2
                 ;;
-            -u | --uprobe)
+            --uprobe)
                 opt_uprobes+=("$2")
                 shift 2
                 ;;
-            -k | --kprobe)
+            --kprobe)
                 opt_kprobes+=("$2")
                 shift 2
                 ;;
-            -e | --event)
+            --event)
                 opt_events+=("$2")
                 shift 2
                 ;;
