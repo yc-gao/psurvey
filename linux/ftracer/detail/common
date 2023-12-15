@@ -86,7 +86,8 @@ opt_uprobes=()
 opt_kprobes=()
 
 opt_duration=
-opt_stacktrace=
+opt_kstacktrace=
+opt_ustacktrace=
 
 opt_pid=()
 opt_followfork=
@@ -100,18 +101,25 @@ do_main() {
     do_event "${opt_events[@]}"
 
     # cannot get userspace sym
-    if [[ -n "$opt_stacktrace" ]]; then
-        echo stacktrace > $tracefs/trace_options
-        run_atexit "echo nostacktrace > $tracefs/trace_options"
+    if [[ -n "${opt_ustacktrace}${opt_kstacktrace}" ]]; then
+        if [[ -n "${opt_kstacktrace}" ]]; then
+            echo 1 > "$tracefs/options/stacktrace"
+            run_atexit "echo 0 > $tracefs/options/stacktrace"
+        fi
 
-        echo userstacktrace > $tracefs/trace_options
-        run_atexit "echo nouserstacktrace > $tracefs/trace_options"
+        if [[ -n "${opt_ustacktrace}" ]]; then
+            echo 1 > "$tracefs/options/userstacktrace"
+            run_atexit "echo 0 > $tracefs/options/userstacktrace"
 
-        echo sym-offset > $tracefs/trace_options
-        run_atexit "echo nosym-offset > $tracefs/trace_options"
+            echo 1 > "$tracefs/options/sym-userobj"
+            run_atexit "echo 0 > $tracefs/options/sym-userobj"
+        fi
 
-        echo sym-addr > $tracefs/trace_options
-        run_atexit "echo nosym-addr > $tracefs/trace_options"
+        echo 1 > "$tracefs/options/sym-offset"
+        run_atexit "echo 0 > $tracefs/options/sym-offset"
+
+        echo 1 > "$tracefs/options/sym-addr"
+        run_atexit "echo 0 > $tracefs/options/sym-addr"
     fi
 
     if (( ${#opt_pid[@]} )); then
@@ -169,8 +177,12 @@ main() {
                 opt_duration="$2"
                 shift 2
                 ;;
-            -s | --stacktrace)
-                opt_stacktrace=1
+            -us | --ustacktrace)
+                opt_ustacktrace=1
+                shift
+                ;;
+            -ks | --kstacktrace)
+                opt_kstacktrace=1
                 shift
                 ;;
             -p | --pid)
