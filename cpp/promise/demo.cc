@@ -13,9 +13,12 @@ struct Num {
 
 int main(int argc, char *argv[]) {
   Promise<int> num;
-  num.Then([](int num) { return Num(num); })
-      .Then([](Num num) { return num.val * num.val; })
-      .Then([](Num num) { return std::to_string(num.val); })
+
+  auto square = num.Then([](int num) { return Num(num); }).Then([](Num num) {
+    return num.val * num.val;
+  });
+
+  square.Then([](Num num) { return std::to_string(num.val); })
       .Then([](std::string num) { std::cout << "num: " << num << std::endl; })
       .Catch([](const std::error_code &ec) {
         std::cerr << "error msg: " << ec.message() << std::endl;
