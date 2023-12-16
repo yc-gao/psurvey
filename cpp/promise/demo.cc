@@ -22,7 +22,6 @@ int main(int argc, char *argv[]) {
       })
       .Finally([]() { std::cout << "finally1\n"; })
       .Finally([]() { std::cout << "finally2\n"; });
-  ;
 
   num.Resolve(100);
   num.Reject(std::error_code());
