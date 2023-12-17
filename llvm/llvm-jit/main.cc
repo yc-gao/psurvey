@@ -22,17 +22,6 @@ std::unique_ptr<llvm::Module> LoadIR(llvm::LLVMContext &Context,
   return module;
 }
 
-std::unique_ptr<llvm::ExecutionEngine>
-CreateEE(std::unique_ptr<llvm::Module> m) {
-  std::string errStr;
-  std::unique_ptr<llvm::ExecutionEngine> EE(
-      llvm::EngineBuilder(std::move(m)).setErrorStr(&errStr).create());
-  if (!EE) {
-    llvm::errs() << errStr << '\n';
-  }
-  return EE;
-}
-
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "llvm jit");
 
@@ -44,16 +33,15 @@ int main(int argc, char *argv[]) {
   if (!m) {
     return 1;
   }
-  llvm::outs() << "module ir:\n" << *m << '\n';
 
-  std::unique_ptr<llvm::ExecutionEngine> EE = CreateEE(std::move(m));
+  std::string errStr;
+  std::unique_ptr<llvm::ExecutionEngine> EE =
+      llvm::EngineBuilder(std::move(m)).setErrorStr(&errStr).create();
   if (!EE) {
+    llvm::errs() << errStr << '\n';
     return 1;
   }
-  llvm::Function *fib = EE->FindFunctionNamed("fib");
-  std::vector<llvm::GenericValue> Args(1);
-  Args[0].IntVal = llvm::APInt(32, 10);
-  llvm::GenericValue GV = EE->runFunction(fib, Args);
-  llvm::outs() << "Result: " << GV.IntVal << '\n';
+  void (*func)() = (void (*)())EE->getFunctionAddress("main");
+  func();
   return 0;
 }
