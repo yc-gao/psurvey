@@ -1,5 +1,4 @@
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IRReader/IRReader.h"
@@ -35,13 +34,15 @@ int main(int argc, char *argv[]) {
   }
 
   std::string errStr;
-  std::unique_ptr<llvm::ExecutionEngine> EE =
-      llvm::EngineBuilder(std::move(m)).setErrorStr(&errStr).create();
+  std::unique_ptr<llvm::ExecutionEngine> EE(
+      llvm::EngineBuilder(std::move(m)).setErrorStr(&errStr).create());
   if (!EE) {
     llvm::errs() << errStr << '\n';
     return 1;
   }
-  void (*func)() = (void (*)())EE->getFunctionAddress("main");
-  func();
+  int (*func)(int) = (int (*)(int))EE->getFunctionAddress("fib");
+  llvm::outs() << "fib 1: " << func(1) << '\n';
+  llvm::outs() << "fib 2: " << func(2) << '\n';
+  llvm::outs() << "fib 3: " << func(3) << '\n';
   return 0;
 }
