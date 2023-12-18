@@ -1,4 +1,4 @@
 #include "DemoOps.h"
 
 #define GET_OP_CLASSES
-#include "DemoOps.cpp.inc"
+#include "demo/IR/DemoOps.cpp.inc"

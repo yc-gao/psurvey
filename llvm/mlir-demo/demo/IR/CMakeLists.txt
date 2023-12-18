@@ -13,6 +13,6 @@ add_mlir_dialect_library(MLIRDemo
         MLIRDemoOpsIncGen
     LINK_LIBS PUBLIC
         MLIRIR)
+
 target_include_directories(MLIRDemo PUBLIC
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR})
+    ${CMAKE_CURRENT_BINARY_DIR})

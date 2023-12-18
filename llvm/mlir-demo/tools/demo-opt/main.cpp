@@ -3,10 +3,12 @@
 #include "mlir/InitAllPasses.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
-#include "DemoDialect.h"
+#include "demo/Transforms/Passes.h"
+#include "demo/IR/DemoDialect.h"
 
 int main(int argc, char **argv) {
   mlir::registerAllPasses();
+  mlir::demo::registerDemoPasses();
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);

@@ -2,4 +2,4 @@
 
 #include "mlir/IR/Dialect.h"
 
-#include "DemoDialect.h.inc"
+#include "demo/IR/DemoDialect.h.inc"

@@ -7,11 +7,11 @@ namespace demo {
 void DemoDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
-#include "DemoOps.cpp.inc"
+#include "demo/IR/DemoOps.cpp.inc"
       >();
 }
 
 } // namespace demo
 } // namespace mlir
 
-#include "DemoDialect.cpp.inc"
+#include "demo/IR/DemoDialect.cpp.inc"
