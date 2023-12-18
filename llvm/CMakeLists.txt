@@ -21,4 +21,5 @@ include_directories(${MLIR_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
 add_subdirectory(llvm-jit)
+add_subdirectory(mlir-demo)
 
