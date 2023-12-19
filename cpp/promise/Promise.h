@@ -8,11 +8,14 @@
 namespace detail {
 template <typename T> class Type2Type {};
 
-template <typename> class PromiseImpl;
+template <typename = void> class PromiseImpl;
 
 template <>
 class PromiseImpl<void>
     : public std::enable_shared_from_this<PromiseImpl<void>> {
+  enum Status { NONE = 0, RESOLVED, REJECTED };
+  Status status_{NONE};
+
   std::function<void()> resolve_{[]() {}};
   std::function<void(const std::error_code &)> reject_{
       [](const std::error_code &) {}};
@@ -20,10 +23,18 @@ class PromiseImpl<void>
 
 public:
   void Resolve() {
+    if (status_) {
+      return;
+    }
+    status_ = RESOLVED;
     resolve_();
     finally_();
   }
   void Reject(const std::error_code &ec) {
+    if (status_) {
+      return;
+    }
+    status_ = REJECTED;
     reject_(ec);
     finally_();
   }
@@ -74,10 +85,16 @@ public:
     };
     return this->shared_from_this();
   }
+
+  bool Resolved() const { return status_ == RESOLVED; }
+  bool Rejected() const { return status_ == REJECTED; }
 };
 
 template <typename T>
 class PromiseImpl : public std::enable_shared_from_this<PromiseImpl<T>> {
+  enum Status { NONE = 0, RESOLVED, REJECTED };
+  Status status_{NONE};
+
   std::function<void(T)> resolve_{[](T) {}};
   std::function<void(const std::error_code &)> reject_{
       [](const std::error_code &) {}};
@@ -85,10 +102,18 @@ class PromiseImpl : public std::enable_shared_from_this<PromiseImpl<T>> {
 
 public:
   void Resolve(T val) {
+    if (status_) {
+      return;
+    }
+    status_ = RESOLVED;
     resolve_(std::move(val));
     finally_();
   }
   void Reject(const std::error_code &ec) {
+    if (status_) {
+      return;
+    }
+    status_ = REJECTED;
     reject_(ec);
     finally_();
   }
@@ -138,11 +163,14 @@ public:
     };
     return this->shared_from_this();
   }
+
+  bool Resolved() const { return status_ == RESOLVED; }
+  bool Rejected() const { return status_ == REJECTED; }
 };
 
 } // namespace detail
 
-template <typename> class Promise;
+template <typename = void> class Promise;
 
 template <> class Promise<void> {
   std::shared_ptr<detail::PromiseImpl<void>> impl_;
@@ -169,6 +197,27 @@ public:
   }
   template <typename F> auto Finally(F &&f) -> Promise<void> {
     return {impl_->Finally(std::forward<F>(f))};
+  }
+
+  bool Resolved() const { return impl_->Resolved(); }
+  bool Rejected() const { return impl_->Rejected(); }
+
+  friend Promise operator+(Promise a, Promise b) {
+    Promise r;
+    a.Then([b = b.impl_->weak_from_this(),
+            r = r.impl_->weak_from_this()]() mutable {
+      if (b.lock()->Resolved()) {
+        r.lock()->Resolve();
+      }
+    });
+    b.Then([a = a.impl_->weak_from_this(),
+            r = r.impl_->weak_from_this()]() mutable {
+      if (a.lock()->Resolved()) {
+        r.lock()->Resolve();
+      }
+    });
+    r.Finally([a, b]() {});
+    return r;
   }
 };
 
