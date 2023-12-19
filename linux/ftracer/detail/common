@@ -81,21 +81,42 @@ usage() {
     echo 'usage'
 }
 
-opt_events=()
-opt_uprobes=()
-opt_kprobes=()
-
 opt_duration=
+
 opt_kstacktrace=
 opt_ustacktrace=
 
-opt_pid=()
+opt_pid=
 opt_followfork=
 opt_filter=()
 opt_trigger=()
 
+opt_tracer=
+opt_events=()
+opt_uprobes=()
+opt_kprobes=()
 
 do_main() {
+    if [[ -n "${opt_tracer}" ]]; then
+        echo "$opt_tracer" > "$tracefs/current_tracer"
+        run_atexit "echo nop > $tracefs/current_tracer"
+        for f in "${opt_filter[@]}"; do
+            local -a tmp
+            read -r -a tmp <<< "$f"
+            if [ -z "${tmp[*]}" ]; then
+                continue
+            fi
+            if [[ "${tmp[0]}" != "$opt_tracer" ]]; then
+                tmp=("${tmp[@]:1}")
+                echo "${tmp[*]}" > "$tracefs/set_ftrace_filter"
+                run_atexit "echo '!${tmp[*]}' > $tracefs/set_ftrace_filter"
+            fi
+        done
+        if [[ -n "$opt_pid" ]]; then
+            echo "$opt_pid" > "$tracefs/set_ftrace_pid"
+            run_atexit "echo > $tracefs/set_ftrace_pid"
+        fi
+    fi
     do_uprobe "${opt_uprobes[@]}"
     do_kprobe "${opt_kprobes[@]}"
     do_event "${opt_events[@]}"
@@ -122,8 +143,8 @@ do_main() {
         run_atexit "echo 0 > $tracefs/options/sym-addr"
     fi
 
-    if (( ${#opt_pid[@]} )); then
-        echo "${opt_pid[*]}" > "$tracefs/set_event_pid"
+    if [[ -n "$opt_pid" ]]; then
+        echo "$opt_pid" > "$tracefs/set_event_pid"
         run_atexit "echo > $tracefs/set_event_pid"
         if [[ -n "$opt_followfork" ]]; then
             echo 1 > "$tracefs/options/event-fork"
@@ -186,7 +207,7 @@ main() {
                 shift
                 ;;
             -p | --pid)
-                opt_pid+=("$2")
+                opt_pid="$2"
                 shift 2
                 ;;
             --follow-fork)
@@ -199,6 +220,10 @@ main() {
                 ;;
             --trigger)
                 opt_trigger+=("$2")
+                shift 2
+                ;;
+            --tracer)
+                opt_tracer="$2"
                 shift 2
                 ;;
             --uprobe)
