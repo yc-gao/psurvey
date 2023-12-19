@@ -227,19 +227,16 @@ public:
 
   friend Promise operator+(Promise a, Promise b) {
     Promise r;
-    a.Then([b = b.impl_->weak_from_this(),
-            r = r.impl_->weak_from_this()]() mutable {
+    a.Then([r, b = b.impl_->weak_from_this()]() mutable {
       if (b.lock()->Resolved()) {
-        r.lock()->Resolve();
+        r.Resolve();
       }
     });
-    b.Then([a = a.impl_->weak_from_this(),
-            r = r.impl_->weak_from_this()]() mutable {
+    b.Then([r, a = a.impl_->weak_from_this()]() mutable {
       if (a.lock()->Resolved()) {
-        r.lock()->Resolve();
+        r.Resolve();
       }
     });
-    r.Finally([a, b]() {});
     if (a.Resolved() && b.Resolved()) {
       r.Resolve();
     }

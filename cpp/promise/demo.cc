@@ -29,5 +29,15 @@ int main(int argc, char *argv[]) {
 
   num.Resolve(100);
   num.Reject(std::error_code());
+
+  Promise<> a, b, c;
+  a.Then([]() { std::cout << "a Resolved\n"; });
+  b.Then([]() { std::cout << "b Resolved\n"; });
+  c.Then([]() { std::cout << "c Resolved\n"; });
+  Promise<> r = a + b + c;
+  r.Then([]() { std::cout << "c\n"; });
+  a.Resolve();
+  b.Resolve();
+  c.Resolve();
   return 0;
 }
