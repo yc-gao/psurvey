@@ -98,20 +98,29 @@ class PromiseImpl : public std::enable_shared_from_this<PromiseImpl<T>> {
   enum Status { NONE = 0, RESOLVED, REJECTED };
   Status status_{NONE};
 
+  std::unique_ptr<T> data_;
   std::error_code ec_;
 
-  std::function<void(T)> resolve_{[](T) {}};
+  std::function<void(const T &)> resolve_{[](const T &) {}};
   std::function<void(const std::error_code &)> reject_{
       [](const std::error_code &) {}};
   std::function<void()> finally_{[]() {}};
 
 public:
-  void Resolve(T val) {
+  void Resolve(const T &val) {
+    if (status_) {
+      return;
+    }
+    Resolve(T(val));
+  }
+
+  void Resolve(T &&val) {
     if (status_) {
       return;
     }
     status_ = RESOLVED;
-    resolve_(std::move(val));
+    data_ = std::make_unique<T>(std::move(val));
+    resolve_(*data_);
     finally_();
   }
   void Reject(std::error_code ec) {
@@ -131,7 +140,7 @@ public:
   template <typename F>
   auto Then(F &&f, Type2Type<void>) -> std::shared_ptr<PromiseImpl<void>> {
     auto result = std::make_shared<PromiseImpl<void>>();
-    resolve_ = [result, f = std::forward<F>(f)](T val) mutable {
+    resolve_ = [result, f = std::forward<F>(f)](const T &val) mutable {
       std::forward<F>(f)(std::move(val));
       result->Resolve();
     };
@@ -144,8 +153,8 @@ public:
   template <typename F, typename R>
   auto Then(F &&f, Type2Type<R>) -> std::shared_ptr<PromiseImpl<R>> {
     auto result = std::make_shared<PromiseImpl<R>>();
-    resolve_ = [result, f = std::forward<F>(f)](T val) mutable {
-      result->Resolve(std::forward<F>(f)(std::move(val)));
+    resolve_ = [result, f = std::forward<F>(f)](const T &val) mutable {
+      result->Resolve(std::forward<F>(f)(val));
     };
     reject_ = [result, f = std::move(reject_)](const std::error_code &ec) {
       f(ec);
