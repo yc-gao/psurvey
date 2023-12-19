@@ -1,10 +1,18 @@
 #include "stacktrace.h"
 
-void func2() { print_stack(); }
-void func1() { func2(); }
+static void /* "static" means don't export the symbol... */
+myfunc2(void) {
+  print_stack();
+}
 
-void func0() { func1(); }
+void myfunc(int ncalls) {
+  if (ncalls > 1)
+    myfunc(ncalls - 1);
+  else
+    myfunc2();
+}
+
 int main(int argc, char *argv[]) {
-  func0();
+  myfunc(2);
   return 0;
 }

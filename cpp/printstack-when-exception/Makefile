@@ -7,7 +7,7 @@ clean:
 
 
 main: main.cpp stacktrace.cpp
-	$(CXX) -o $@ $^ -ldl
+	$(CXX) -o $@ -rdynamic $^ -ldl
 
 preload.so: preload.cpp stacktrace.cpp
 	$(CXX) -o $@ -fPIC -shared $^ -ldl
