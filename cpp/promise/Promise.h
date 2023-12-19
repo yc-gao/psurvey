@@ -49,12 +49,14 @@ public:
   template <typename F>
   auto Then(F &&f, Type2Type<void>) -> std::shared_ptr<PromiseImpl<void>> {
     auto result = std::make_shared<PromiseImpl<void>>();
-    resolve_ = [result, f = std::forward<F>(f)]() mutable {
+    resolve_ = [result, resolve = std::move(resolve_),
+                f = std::forward<F>(f)]() mutable {
+      resolve();
       std::forward<F>(f)();
       result->Resolve();
     };
-    reject_ = [result, f = std::move(reject_)](const std::error_code &ec) {
-      f(ec);
+    reject_ = [result, reject = std::move(reject_)](const std::error_code &ec) {
+      reject(ec);
       result->Reject(ec);
     };
     return result;
@@ -62,11 +64,13 @@ public:
   template <typename F, typename R>
   auto Then(F &&f, Type2Type<R>) -> std::shared_ptr<PromiseImpl<R>> {
     auto result = std::make_shared<PromiseImpl<R>>();
-    resolve_ = [result, f = std::forward<F>(f)]() mutable {
+    resolve_ = [result, resolve = std::move(resolve_),
+                f = std::forward<F>(f)]() mutable {
+      resolve();
       result->Resolve(std::forward<F>(f)());
     };
-    reject_ = [result, f = std::move(reject_)](const std::error_code &ec) {
-      f(ec);
+    reject_ = [result, reject = std::move(reject_)](const std::error_code &ec) {
+      reject(ec);
       result->Reject(ec);
     };
     return result;
@@ -140,12 +144,14 @@ public:
   template <typename F>
   auto Then(F &&f, Type2Type<void>) -> std::shared_ptr<PromiseImpl<void>> {
     auto result = std::make_shared<PromiseImpl<void>>();
-    resolve_ = [result, f = std::forward<F>(f)](const T &val) mutable {
+    resolve_ = [result, resolve = std::move(resolve_),
+                f = std::forward<F>(f)](const T &val) mutable {
+      resolve(val);
       std::forward<F>(f)(std::move(val));
       result->Resolve();
     };
-    reject_ = [result, f = std::move(reject_)](const std::error_code &ec) {
-      f(ec);
+    reject_ = [result, reject = std::move(reject_)](const std::error_code &ec) {
+      reject(ec);
       result->Reject(ec);
     };
     return result;
@@ -153,11 +159,13 @@ public:
   template <typename F, typename R>
   auto Then(F &&f, Type2Type<R>) -> std::shared_ptr<PromiseImpl<R>> {
     auto result = std::make_shared<PromiseImpl<R>>();
-    resolve_ = [result, f = std::forward<F>(f)](const T &val) mutable {
+    resolve_ = [result, resolve = std::move(resolve_),
+                f = std::forward<F>(f)](const T &val) mutable {
+      resolve(val);
       result->Resolve(std::forward<F>(f)(val));
     };
-    reject_ = [result, f = std::move(reject_)](const std::error_code &ec) {
-      f(ec);
+    reject_ = [result, reject = std::move(reject_)](const std::error_code &ec) {
+      reject(ec);
       result->Reject(ec);
     };
     return result;
