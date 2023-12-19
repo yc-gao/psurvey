@@ -217,6 +217,9 @@ public:
       }
     });
     r.Finally([a, b]() {});
+    if (a.Resolved() && b.Resolved()) {
+      r.Resolve();
+    }
     return r;
   }
 };
