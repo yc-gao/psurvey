@@ -16,6 +16,8 @@ class PromiseImpl<void>
   enum Status { NONE = 0, RESOLVED, REJECTED };
   Status status_{NONE};
 
+  std::error_code ec_;
+
   std::function<void()> resolve_{[]() {}};
   std::function<void(const std::error_code &)> reject_{
       [](const std::error_code &) {}};
@@ -30,12 +32,13 @@ public:
     resolve_();
     finally_();
   }
-  void Reject(const std::error_code &ec) {
+  void Reject(std::error_code ec) {
     if (status_) {
       return;
     }
     status_ = REJECTED;
-    reject_(ec);
+    ec_ = std::move(ec);
+    reject_(ec_);
     finally_();
   }
 
@@ -95,6 +98,8 @@ class PromiseImpl : public std::enable_shared_from_this<PromiseImpl<T>> {
   enum Status { NONE = 0, RESOLVED, REJECTED };
   Status status_{NONE};
 
+  std::error_code ec_;
+
   std::function<void(T)> resolve_{[](T) {}};
   std::function<void(const std::error_code &)> reject_{
       [](const std::error_code &) {}};
@@ -109,12 +114,13 @@ public:
     resolve_(std::move(val));
     finally_();
   }
-  void Reject(const std::error_code &ec) {
+  void Reject(std::error_code ec) {
     if (status_) {
       return;
     }
     status_ = REJECTED;
-    reject_(ec);
+    ec_ = std::move(ec);
+    reject_(ec_);
     finally_();
   }
 
