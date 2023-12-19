@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <system_error>
 #include <type_traits>
 
@@ -26,7 +27,7 @@ class PromiseImpl<void>
 public:
   void Resolve() {
     if (status_) {
-      return;
+      throw std::logic_error("promise resolved or rejected");
     }
     status_ = RESOLVED;
     resolve_();
@@ -34,10 +35,10 @@ public:
   }
   void Reject(std::error_code ec) {
     if (status_) {
-      return;
+      throw std::logic_error("promise resolved or rejected");
     }
-    status_ = REJECTED;
     ec_ = std::move(ec);
+    status_ = REJECTED;
     reject_(ec_);
     finally_();
   }
@@ -49,13 +50,13 @@ public:
   template <typename F>
   auto Then(F &&f, Type2Type<void>) -> std::shared_ptr<PromiseImpl<void>> {
     auto result = std::make_shared<PromiseImpl<void>>();
-    resolve_ = [result, resolve = std::move(resolve_),
-                f = std::forward<F>(f)]() mutable {
+    resolve_ = [resolve = std::move(resolve_), f = std::forward<F>(f),
+                result]() mutable {
       resolve();
       std::forward<F>(f)();
       result->Resolve();
     };
-    reject_ = [result, reject = std::move(reject_)](const std::error_code &ec) {
+    reject_ = [reject = std::move(reject_), result](const std::error_code &ec) {
       reject(ec);
       result->Reject(ec);
     };
@@ -64,12 +65,12 @@ public:
   template <typename F, typename R>
   auto Then(F &&f, Type2Type<R>) -> std::shared_ptr<PromiseImpl<R>> {
     auto result = std::make_shared<PromiseImpl<R>>();
-    resolve_ = [result, resolve = std::move(resolve_),
-                f = std::forward<F>(f)]() mutable {
+    resolve_ = [resolve = std::move(resolve_), f = std::forward<F>(f),
+                result]() mutable {
       resolve();
       result->Resolve(std::forward<F>(f)());
     };
-    reject_ = [result, reject = std::move(reject_)](const std::error_code &ec) {
+    reject_ = [reject = std::move(reject_), result](const std::error_code &ec) {
       reject(ec);
       result->Reject(ec);
     };
@@ -77,18 +78,19 @@ public:
   }
   template <typename F>
   auto Catch(F &&f) -> std::shared_ptr<PromiseImpl<void>> {
-    reject_ = [f = std::forward<F>(f),
-               reject = std::move(reject_)](const std::error_code &ec) {
+    reject_ = [reject = std::move(reject_),
+               f = std::forward<F>(f)](const std::error_code &ec) mutable {
       reject(ec);
-      f(ec);
+      std::forward<F>(f)(ec);
     };
     return this->shared_from_this();
   }
   template <typename F>
   auto Finally(F &&f) -> std::shared_ptr<PromiseImpl<void>> {
-    finally_ = [f = std::forward<F>(f), finally = std::move(finally_)]() {
+    finally_ = [finally = std::move(finally_),
+                f = std::forward<F>(f)]() mutable {
       finally();
-      f();
+      std::forward<F>(f)();
     };
     return this->shared_from_this();
   }
@@ -113,26 +115,26 @@ class PromiseImpl : public std::enable_shared_from_this<PromiseImpl<T>> {
 public:
   void Resolve(const T &val) {
     if (status_) {
-      return;
+      throw std::logic_error("promise resolved or rejected");
     }
     Resolve(T(val));
   }
 
   void Resolve(T &&val) {
     if (status_) {
-      return;
+      throw std::logic_error("promise resolved or rejected");
     }
-    status_ = RESOLVED;
     data_ = std::make_unique<T>(std::move(val));
+    status_ = RESOLVED;
     resolve_(*data_);
     finally_();
   }
   void Reject(std::error_code ec) {
     if (status_) {
-      return;
+      throw std::logic_error("promise resolved or rejected");
     }
-    status_ = REJECTED;
     ec_ = std::move(ec);
+    status_ = REJECTED;
     reject_(ec_);
     finally_();
   }
@@ -144,13 +146,13 @@ public:
   template <typename F>
   auto Then(F &&f, Type2Type<void>) -> std::shared_ptr<PromiseImpl<void>> {
     auto result = std::make_shared<PromiseImpl<void>>();
-    resolve_ = [result, resolve = std::move(resolve_),
-                f = std::forward<F>(f)](const T &val) mutable {
+    resolve_ = [resolve = std::move(resolve_), f = std::forward<F>(f),
+                result](const T &val) mutable {
       resolve(val);
-      std::forward<F>(f)(std::move(val));
+      std::forward<F>(f)(val);
       result->Resolve();
     };
-    reject_ = [result, reject = std::move(reject_)](const std::error_code &ec) {
+    reject_ = [reject = std::move(reject_), result](const std::error_code &ec) {
       reject(ec);
       result->Reject(ec);
     };
@@ -159,12 +161,12 @@ public:
   template <typename F, typename R>
   auto Then(F &&f, Type2Type<R>) -> std::shared_ptr<PromiseImpl<R>> {
     auto result = std::make_shared<PromiseImpl<R>>();
-    resolve_ = [result, resolve = std::move(resolve_),
-                f = std::forward<F>(f)](const T &val) mutable {
+    resolve_ = [resolve = std::move(resolve_), f = std::forward<F>(f),
+                result](const T &val) mutable {
       resolve(val);
       result->Resolve(std::forward<F>(f)(val));
     };
-    reject_ = [result, reject = std::move(reject_)](const std::error_code &ec) {
+    reject_ = [reject = std::move(reject_), result](const std::error_code &ec) {
       reject(ec);
       result->Reject(ec);
     };
@@ -172,17 +174,18 @@ public:
   }
 
   template <typename F> auto Catch(F &&f) -> std::shared_ptr<PromiseImpl<T>> {
-    reject_ = [f = std::forward<F>(f),
-               reject = std::move(reject_)](const std::error_code &ec) {
+    reject_ = [reject = std::move(reject_),
+               f = std::forward<F>(f)](const std::error_code &ec) mutable {
       reject(ec);
-      f(ec);
+      std::forward<F>(f)(ec);
     };
     return this->shared_from_this();
   }
   template <typename F> auto Finally(F &&f) -> std::shared_ptr<PromiseImpl<T>> {
-    finally_ = [f = std::forward<F>(f), finally = std::move(finally_)]() {
+    finally_ = [finally = std::move(finally_),
+                f = std::forward<F>(f)]() mutable {
       finally();
-      f();
+      std::forward<F>(f)();
     };
     return this->shared_from_this();
   }
@@ -237,9 +240,6 @@ public:
         r.Resolve();
       }
     });
-    if (a.Resolved() && b.Resolved()) {
-      r.Resolve();
-    }
     return r;
   }
 };

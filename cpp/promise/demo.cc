@@ -28,14 +28,12 @@ int main(int argc, char *argv[]) {
       .Finally([]() { std::cout << "finally2\n"; });
 
   num.Resolve(100);
-  num.Reject(std::error_code());
 
   Promise<> a, b, c;
   a.Then([]() { std::cout << "a Resolved\n"; });
   b.Then([]() { std::cout << "b Resolved\n"; });
   c.Then([]() { std::cout << "c Resolved\n"; });
-  Promise<> r = a + b + c;
-  r.Then([]() { std::cout << "c\n"; });
+  (a + b + c).Then([]() { std::cout << "all resolved\n"; });
   a.Resolve();
   b.Resolve();
   c.Resolve();
