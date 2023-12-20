@@ -11,7 +11,9 @@ namespace detail {
 
 template <typename T> class PromiseImpl;
 
-template <> class PromiseImpl<void> {
+template <>
+class PromiseImpl<void>
+    : public std::enable_shared_from_this<PromiseImpl<void>> {
   enum Status {
     NONE = 0,
     RESOLVED,
@@ -120,7 +122,8 @@ public:
   }
 };
 
-template <typename T> class PromiseImpl {
+template <typename T>
+class PromiseImpl : public std::enable_shared_from_this<PromiseImpl<T>> {
   enum Status {
     NONE = 0,
     RESOLVED,
@@ -269,13 +272,13 @@ public:
 
   Promise<void> Then(Promise<void> p) {
     Promise<void> ret;
-    Then([ret, p = p.impl_.get()]() mutable {
-      if (p->Resolved()) {
+    Then([ret, p = p.impl_->weak_from_this()]() mutable {
+      if (p.lock()->Resolved()) {
         ret.Resolve();
       }
     });
-    p.Then([ret, this]() mutable {
-      if (Resolved()) {
+    p.Then([ret, p = impl_->weak_from_this()]() mutable {
+      if (p.lock()->Resolved()) {
         ret.Resolve();
       }
     });
