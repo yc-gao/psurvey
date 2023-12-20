@@ -20,32 +20,24 @@ int main(int argc, char *argv[]) {
   {
     Promise<int> num;
 
-    auto square =
-        num.Then([](int num) { return Num(num); }).Then([](const Num &num) {
-          return num.val * num.val;
-        });
-
-    square.Then([](const Num &num) { return std::to_string(num.val); })
-        .Then([](std::string num) { std::cout << "num: " << num << std::endl; })
-        .Catch([](const std::error_code &ec) {
-          std::cerr << "error msg: " << ec.message() << std::endl;
-        })
-        .Finally([]() { std::cout << "finally1\n"; })
-        .Finally([]() { std::cout << "finally2\n"; });
+    num.Then([](int num) { return Num(num); })
+        .Then([](const Num &num) { return num.val * num.val; })
+        .Then([](int num) { return std::to_string(num); })
+        .Then([](const std::string &num) { std::cout << num << std::endl; });
 
     num.Resolve(100);
   }
 
-  {
-    Promise<> a, b, c;
-    a.Then([]() { std::cout << "a Resolved\n"; });
-    b.Then([]() { std::cout << "b Resolved\n"; });
-    c.Then([]() { std::cout << "c Resolved\n"; });
-    (a + b + c).Then([]() { std::cout << "all resolved\n"; });
-    a.Resolve();
-    b.Resolve();
-    c.Resolve();
-  }
+  // {
+  //   Promise<> a, b, c;
+  //   a.Then([]() { std::cout << "a Resolved\n"; });
+  //   b.Then([]() { std::cout << "b Resolved\n"; });
+  //   c.Then([]() { std::cout << "c Resolved\n"; });
+  //   (a + b + c).Then([]() { std::cout << "all resolved\n"; });
+  //   a.Resolve();
+  //   b.Resolve();
+  //   c.Resolve();
+  // }
 
   {
     Promise<> p;
