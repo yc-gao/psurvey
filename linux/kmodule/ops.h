@@ -3,6 +3,6 @@
 
 #include <linux/fs.h>
 
-struct file_operations dummy_ops;
+extern struct file_operations dummy_ops;
 
 #endif
