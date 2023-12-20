@@ -51,6 +51,8 @@ public:
   bool Resolved() const { return status_ == RESOLVED; }
   bool Rejected() const { return status_ == REJECTED; }
 
+  std::error_code Error() const { return holder_.Error(); }
+
   template <typename F, typename R = std::invoke_result_t<F>>
   auto Then(F &&cb) -> std::shared_ptr<PromiseImpl<R>> {
     return Then(std::forward<F>(cb), Type2Type<R>());
@@ -158,6 +160,10 @@ public:
   bool Resolved() const { return status_ == RESOLVED; }
   bool Rejected() const { return status_ == REJECTED; }
 
+  std::error_code Error() const { return holder_.Error(); }
+  T &Value() { return holder_.Value(); }
+  const T &Value() const { return holder_.Value(); }
+
   template <typename F, typename R = std::invoke_result_t<F, T>>
   auto Then(F &&cb) -> std::shared_ptr<PromiseImpl<R>> {
     return Then(std::forward<F>(cb), Type2Type<R>());
@@ -245,6 +251,11 @@ public:
   void Resolve() { impl_->Resolve(); }
   void Reject(std::error_code ec) { impl_->Reject(std::move(ec)); }
 
+  bool Resolved() const { return impl_->Resolved(); }
+  bool Rejected() const { return impl_->Rejected(); }
+
+  std::error_code Error() const { return impl_.Error(); }
+
   template <typename F, typename R = std::invoke_result_t<F>>
   auto Then(F &&f) -> Promise<R> {
     return {impl_->Then(std::forward<F>(f))};
@@ -255,9 +266,6 @@ public:
   template <typename F> auto Finally(F &&f) -> Promise<void> {
     return {impl_->Finally(std::forward<F>(f))};
   }
-
-  bool Resolved() const { return impl_->Resolved(); }
-  bool Rejected() const { return impl_->Rejected(); }
 
   Promise<void> Then(Promise<void> p) {
     Promise<void> ret;
@@ -294,6 +302,13 @@ public:
   }
   void Reject(std::error_code ec) { impl_->Reject(std::move(ec)); }
 
+  bool Resolved() const { return impl_->Resolved(); }
+  bool Rejected() const { return impl_->Rejected(); }
+
+  std::error_code Error() const { return impl_.Error(); }
+  T &Value() { return impl_->Value(); }
+  const T &Value() const { return impl_->Value(); }
+
   template <typename F, typename R = std::invoke_result_t<F, T>>
   auto Then(F &&f) -> Promise<R> {
     return {impl_->Then(std::forward<F>(f))};
@@ -304,7 +319,4 @@ public:
   template <typename F> auto Finally(F &&f) -> Promise<T> {
     return {impl_->Finally(std::forward<F>(f))};
   }
-
-  bool Resolved() const { return impl_->Resolved(); }
-  bool Rejected() const { return impl_->Rejected(); }
 };
