@@ -204,7 +204,7 @@ public:
   }
   template <typename F>
   auto Finally(F &&func) -> std::shared_ptr<PromiseImpl<T>> {
-    auto result = std::make_shared<PromiseImpl<void>>();
+    auto result = std::make_shared<PromiseImpl<T>>();
     cb_ = [cb = std::move(cb_), func = std::forward<F>(func),
            result](const ErrorOr<T> &holder) mutable {
       cb(holder);
