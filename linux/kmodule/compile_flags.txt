@@ -1,0 +1,6 @@
+-I/usr/src/linux-hwe-5.15-headers-5.15.0-91/include
+-I/usr/src/linux-hwe-5.15-headers-5.15.0-89/include
+-I/usr/src/linux-headers-5.15.0-89-generic/arch/x86/include/generated
+-I/usr/src/linux-headers-5.15.0-91-generic/arch/x86/include/generated
+-I/usr/src/linux-hwe-5.15-headers-5.15.0-89/arch/x86/include
+
