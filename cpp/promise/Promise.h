@@ -254,7 +254,7 @@ public:
   bool Resolved() const { return impl_->Resolved(); }
   bool Rejected() const { return impl_->Rejected(); }
 
-  std::error_code Error() const { return impl_.Error(); }
+  std::error_code Error() const { return impl_->Error(); }
 
   template <typename F, typename R = std::invoke_result_t<F>>
   auto Then(F &&f) -> Promise<R> {
@@ -305,7 +305,7 @@ public:
   bool Resolved() const { return impl_->Resolved(); }
   bool Rejected() const { return impl_->Rejected(); }
 
-  std::error_code Error() const { return impl_.Error(); }
+  std::error_code Error() const { return impl_->Error(); }
   T &Value() { return impl_->Value(); }
   const T &Value() const { return impl_->Value(); }
 
