@@ -48,6 +48,16 @@ int main(int argc, char *argv[]) {
     p.Then(demo).Then([]() { std::cout << "empty" << std::endl; });
     p.Resolve();
   }
+  {
+    Promise<> a, b, c;
+    a.Then([]() { std::cout << "a" << std::endl; });
+    b.Then([]() { std::cout << "b" << std::endl; });
+    c.Then([]() { std::cout << "c" << std::endl; });
+    a.Then(b).Then(c).Then([]() { std::cout << "all" << std::endl; });
+    a.Resolve();
+    b.Resolve();
+    c.Resolve();
+  }
 
   return 0;
 }

@@ -48,6 +48,9 @@ public:
     Populate();
   }
 
+  bool Resolved() const { return status_ == RESOLVED; }
+  bool Rejected() const { return status_ == REJECTED; }
+
   template <typename F, typename R = std::invoke_result_t<F>>
   auto Then(F &&cb) -> std::shared_ptr<PromiseImpl<R>> {
     return Then(std::forward<F>(cb), Type2Type<R>());
@@ -152,6 +155,9 @@ public:
     Populate();
   }
 
+  bool Resolved() const { return status_ == RESOLVED; }
+  bool Rejected() const { return status_ == REJECTED; }
+
   template <typename F, typename R = std::invoke_result_t<F, T>>
   auto Then(F &&cb) -> std::shared_ptr<PromiseImpl<R>> {
     return Then(std::forward<F>(cb), Type2Type<R>());
@@ -249,6 +255,25 @@ public:
   template <typename F> auto Finally(F &&f) -> Promise<void> {
     return {impl_->Finally(std::forward<F>(f))};
   }
+
+  bool Resolved() const { return impl_->Resolved(); }
+  bool Rejected() const { return impl_->Rejected(); }
+
+  Promise<void> Then(Promise<void> p) {
+    Promise<void> ret;
+    Then([ret, p = p.impl_.get()]() mutable {
+      if (p->Resolved()) {
+        ret.Resolve();
+      }
+    });
+    p.Then([ret, this]() mutable {
+      if (Resolved()) {
+        ret.Resolve();
+      }
+    });
+
+    return ret;
+  }
 };
 
 template <typename T> class Promise {
@@ -279,4 +304,7 @@ public:
   template <typename F> auto Finally(F &&f) -> Promise<T> {
     return {impl_->Finally(std::forward<F>(f))};
   }
+
+  bool Resolved() const { return impl_->Resolved(); }
+  bool Rejected() const { return impl_->Rejected(); }
 };
