@@ -1,11 +1,22 @@
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/CodeGen.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace {
 llvm::cl::opt<std::string> InputFile(llvm::cl::Positional, llvm::cl::init("-"));
-llvm::cl::opt<std::string> OutputFile(llvm::cl::Positional,
-                                      llvm::cl::init("output.o"));
+llvm::cl::opt<std::string> OutputFile("-o", llvm::cl::init("output.o"));
 } // namespace
 
 std::unique_ptr<llvm::Module> LoadIR(llvm::LLVMContext &Context,
@@ -37,7 +48,7 @@ int main(int argc, char *argv[]) {
   auto TargetTriple = llvm::sys::getDefaultTargetTriple();
   m->setTargetTriple(TargetTriple);
   std::string Error;
-  auto Target = TargetRegistry::lookupTarget(TargetTriple, Error);
+  auto Target = llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
   if (!Target) {
     llvm::errs() << Error;
     return 1;
@@ -45,20 +56,20 @@ int main(int argc, char *argv[]) {
 
   auto CPU = "generic";
   auto Features = "";
-  TargetOptions opt;
+  llvm::TargetOptions opt;
   auto TheTargetMachine = Target->createTargetMachine(
-      TargetTriple, CPU, Features, opt, Reloc::PIC_);
+      TargetTriple, CPU, Features, opt, llvm::Reloc::PIC_);
   m->setDataLayout(TheTargetMachine->createDataLayout());
 
   std::error_code EC;
-  raw_fd_ostream dest(OutputFile, EC, sys::fs::OF_None);
+  llvm::raw_fd_ostream dest(OutputFile, EC, llvm::sys::fs::OF_None);
   if (EC) {
     llvm::errs() << "Could not open file: " << EC.message();
     return 1;
   }
 
-  legacy::PassManager pass;
-  auto FileType = CodeGenFileType::ObjectFile;
+  llvm::legacy::PassManager pass;
+  auto FileType = llvm::CodeGenFileType::CGFT_ObjectFile;
 
   if (TheTargetMachine->addPassesToEmitFile(pass, dest, nullptr, FileType)) {
     llvm::errs() << "TheTargetMachine can't emit a file of this type";

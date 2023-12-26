@@ -6,7 +6,6 @@ set(LLVM_LINK_COMPONENTS
     AllTargetsDescs
     AllTargetsInfos
     AsmPrinter
-    IR
 )
 
 file(GLOB SRCS *.cc)
