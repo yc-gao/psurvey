@@ -16,7 +16,8 @@
 
 namespace {
 llvm::cl::opt<std::string> InputFile(llvm::cl::Positional, llvm::cl::init("-"));
-llvm::cl::opt<std::string> OutputFile("-o", llvm::cl::init("output.o"));
+llvm::cl::opt<std::string> OutputFile("o", llvm::cl::init("-"),
+                                      llvm::cl::init("output.o"));
 } // namespace
 
 std::unique_ptr<llvm::Module> LoadIR(llvm::LLVMContext &Context,
