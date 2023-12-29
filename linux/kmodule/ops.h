@@ -3,6 +3,7 @@
 
 #include <linux/fs.h>
 
-extern struct file_operations dummy_ops;
+int dummy_open(struct inode *inode, struct file *file);
+int dummy_release(struct inode *inode, struct file *file);
 
 #endif

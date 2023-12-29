@@ -1,6 +1,5 @@
-EXTRA_CFLAGS = -Wall -g
 obj-m += dummy.o
-dummy-y = ops.o
+dummy-y = ops.o proc.o
 
 KDIR = /lib/modules/`uname -r`/build
 
