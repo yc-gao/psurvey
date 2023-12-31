@@ -62,8 +62,13 @@ macro(bpf_object name)
 
     foreach(src obj IN ZIP_LISTS srcs objs)
         add_custom_command(OUTPUT ${obj}
-            COMMAND ${CLANG} -target bpf -o ${obj} -c -D__TARGET_ARCH_${ARCH} -g -O2 -I${libbpf_INCLUDE_DIRS} -I/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu ${CMAKE_CURRENT_SOURCE_DIR}/${src}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+            COMMAND ${CLANG} -target bpf
+                -o ${obj} -c -g -O2
+                -D__TARGET_ARCH_${ARCH}
+                -I${libbpf_INCLUDE_DIRS} -I/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu
+                ${CMAKE_CURRENT_SOURCE_DIR}/${src}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${src})
     endforeach()
     add_custom_command(OUTPUT ${name}.skel.h
         COMMAND bpftool gen object ${name}.o ${objs}
