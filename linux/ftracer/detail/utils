@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 
 err() {
-    echo "$@"
+    >&2 echo "$@"
+}
+
+die() {
+    err "$@"
     exit 1
 }
 
 do_run() {
-    if ! eval "$@"; then
-        err "WARNING: command failed \"$*\""
+    if ! eval "$*"; then
+        die "WARNING: command failed \"$*\""
     fi
 }
 
@@ -17,15 +21,16 @@ join() {
     echo "$*"
 }
 
+# get_addr binary symbol
 get_addr() {
     local bin="$1"
     local sym="$2"
     local addr
     addr=$(objdump -tT "${bin}" | awk -v sym="${sym}" '$NF == sym && $4 == ".text" {print $1;exit}')
     [[ "$addr" == "" ]] && addr=$(objdump -tT -C "${bin}" | awk -v sym="${sym}" '$NF == sym && $4 == ".text" {print $1;exit}')
-    [[ "$addr" == "" ]] && err "missing sym: ${bin}:${sym}"
-    (( 0x$addr == 0 )) && err "failed resolve: ${bin}:${sym}"
-    addr=0x$(printf "%x" 0x$addr)
+    [[ "$addr" == "" ]] && die "missing sym: ${bin}:${sym}"
+    (( 0x$addr == 0 )) && die "failed resolve: ${bin}:${sym}"
+    addr=0x$(printf "%x" "0x$addr")
     echo "$addr"
 }
 
@@ -46,27 +51,6 @@ run_once() {
         if [[ -z "${once_cmds[$cmd]}" ]]; then
             do_run "$cmd"
             once_cmds["${cmd}"]=1
-        fi
-    done
-}
-
-event_stack=()
-event_push() {
-    local e
-    for e in "$@"; do
-        event_stack+=("$e")
-    done
-}
-event_pop() {
-    event_stack=("${event_stack[@]:0:${#event_stack[@]} - 1}")
-}
-event_pfind() {
-    local f="$1"
-    local e
-    for e in "${event_stack[@]}"; do
-        if [[ "$f" == "$e"* ]]; then
-            echo "$e"
-            break
         fi
     done
 }
