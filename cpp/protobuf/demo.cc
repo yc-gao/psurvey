@@ -19,5 +19,14 @@ int main(int argc, char *argv[]) {
   std::string buf;
   google::protobuf::TextFormat::PrintToString(g, &buf);
   std::cout << buf;
+
+  {
+    Group g;
+    google::protobuf::TextFormat::ParseFromString(buf, &g);
+    for (auto &&p : g.persons()) {
+      std::cout << p.name() << std::endl;
+    }
+  }
+
   return 0;
 }
