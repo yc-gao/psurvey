@@ -195,6 +195,22 @@ main() {
         case "$1" in
             -h | --help)
                 usage
+                shift
+                exit
+                ;;
+            -ls-event)
+                cat $tracefs/available_events
+                shift
+                exit
+                ;;
+            -ls-filter)
+                cat $tracefs/available_filter_functions
+                shift
+                exit
+                ;;
+            -ls-tracer)
+                cat $tracefs/available_tracers
+                shift
                 exit
                 ;;
             -d | --duration)
