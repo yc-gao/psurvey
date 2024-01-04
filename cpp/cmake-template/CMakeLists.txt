@@ -1,11 +1,23 @@
 cmake_minimum_required(VERSION 3.17)
+
 project(cmake-template VERSION 0.0.1)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+enable_language(CUDA)
+
+enable_testing()
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe" CACHE STRING "cxx compile flags")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -rdynamic -fno-omit-frame-pointer" CACHE STRING "cxx compile flags only debug")
+set(CMAKE_CXX_STANDARD_REQUIRED ON CACHE BOOL "Require the specified C++ standard for all targets")
 
-include_directories(${CMAKE_CURRENT_LIST_DIR})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pipe" CACHE STRING "Flags used by the compiler")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Oo -rdynamic -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-inline" CACHE STRING "Flags used by the compiler during Debug builds")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3" CACHE STRING "Flags used by the compiler during Release builds")
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+# cuda
+set(CMAKE_CUDA_ARCHITECTURES "70;80;90" CACHE STRING "Cuda architectures")
+add_executable(cuda cuda.cu)
 
