@@ -63,9 +63,9 @@ void func_test() {
 }
 
 template <typename U, typename T> void do_test(T &&) {
-  static_assert(std::is_same_v<T, U>);
+  static_assert(std::is_same_v<T &&, U>);
 }
-void template_test() {
+void param_test() {
 
   {
     int n;
@@ -89,11 +89,11 @@ void template_test() {
 
   {
     int &&n = 1;
-    do_test<int>(std::move(n));
+    do_test<int &&>(std::move(n));
   }
   {
     const int &&n = 1;
-    do_test<const int>(std::move(n));
+    do_test<const int &&>(std::move(n));
   }
 }
 
