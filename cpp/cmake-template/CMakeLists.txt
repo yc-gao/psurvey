@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 3.17)
 
 project(cmake-template VERSION 0.0.1)
 
-enable_language(CUDA)
-enable_testing()
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
@@ -16,7 +13,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3" CACHE STRING "Flags
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-# cuda
-set(CMAKE_CUDA_ARCHITECTURES "70;80;90" CACHE STRING "Cuda architectures")
-add_executable(cuda cuda.cu)
+find_package(asio REQUIRED)
+add_executable(demo demo.cc)
+target_link_libraries(demo asio::asio)
 
