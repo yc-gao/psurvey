@@ -1,39 +1,35 @@
 #pragma once
 #include <functional>
+#include <iostream>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <nvrtc.h>
 
-#define NVVM_ASSERT(expr)                                                      \
-  do {                                                                         \
-    auto err = (expr);                                                         \
-    if (err != NVVM_SUCCESS) {                                                 \
-      std::cerr << "error libnvvm call failed" << std::endl;                   \
-      exit(-1);                                                                \
-    }                                                                          \
-  } while (0)
+inline void nv_assert(nvrtcResult err) {
+  if (err != NVRTC_SUCCESS) {
+    std::cerr << "error nvrtc call failed" << std::endl;
+    exit(-1);
+  }
+}
 
-#define CU_ASSERT(expr)                                                        \
-  do {                                                                         \
-    auto err = (expr);                                                         \
-    if (err != CUDA_SUCCESS) {                                                 \
-      const char *name;                                                        \
-      cuGetErrorName(err, &name);                                              \
-      const char *msg;                                                         \
-      cuGetErrorString(err, &msg);                                             \
-      std::cerr << "error " << name << ":" << msg << std::endl;                \
-      exit(-1);                                                                \
-    }                                                                          \
-  } while (0)
+inline void nv_assert(cudaError_enum err) {
+  if (err != CUDA_SUCCESS) {
+    const char *name;
+    cuGetErrorName(err, &name);
+    const char *msg;
+    cuGetErrorString(err, &msg);
+    std::cerr << "error " << name << ":" << msg << std::endl;
+    exit(-1);
+  }
+}
 
-#define CUDA_ASSERT(expr)                                                      \
-  do {                                                                         \
-    auto err = (expr);                                                         \
-    if (err != cudaSuccess) {                                                  \
-      std::cerr << "error " << cudaGetErrorString(err) << std::endl;           \
-      exit(-1);                                                                \
-    }                                                                          \
-  } while (0)
+inline void nv_assert(cudaError_t err) {
+  if (err != cudaSuccess) {
+    std::cerr << "error " << cudaGetErrorString(err) << std::endl;
+    exit(-1);
+  }
+}
 
 class Defer {
   std::function<void()> cb_;

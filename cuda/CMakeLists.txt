@@ -13,3 +13,6 @@ find_package(CUDAToolkit REQUIRED)
 add_executable(ptx_jit ptx_jit.cc)
 target_link_libraries(ptx_jit PUBLIC CUDA::cudart CUDA::cuda_driver)
 
+add_executable(kernel2ptx kernel2ptx.cc)
+target_link_libraries(kernel2ptx PUBLIC CUDA::cudart CUDA::nvrtc CUDA::cuda_driver)
+

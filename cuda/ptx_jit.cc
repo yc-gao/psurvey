@@ -37,20 +37,20 @@ const std::string ptx_source = R"(
 
 int main(int argc, char *argv[]) {
   int driverVersion;
-  CU_ASSERT(cuDriverGetVersion(&driverVersion));
+  nv_assert(cuDriverGetVersion(&driverVersion));
   std::cout << "cu init, driver version " << driverVersion << std::endl;
 
-  CU_ASSERT(cuInit(0));
+  nv_assert(cuInit(0));
 
   int device_count = -1;
-  CU_ASSERT(cuDeviceGetCount(&device_count));
+  nv_assert(cuDeviceGetCount(&device_count));
   std::cout << "device count " << device_count << std::endl;
   if (device_count <= 0) {
     return 0;
   }
 
   CUdevice device;
-  CU_ASSERT(cuDeviceGet(&device, 0));
+  nv_assert(cuDeviceGet(&device, 0));
   std::cout << "get cuda device idx 0" << std::endl;
 
   // init device context
@@ -60,22 +60,22 @@ int main(int argc, char *argv[]) {
 
   CUjit_option options[] = {};
   void *optionVals[] = {};
-  CU_ASSERT(cuLinkCreate(sizeof(options) / sizeof(options[0]), options,
+  nv_assert(cuLinkCreate(sizeof(options) / sizeof(options[0]), options,
                          optionVals, &lState));
-  CU_ASSERT(cuLinkAddData(lState, CU_JIT_INPUT_PTX, (void *)ptx_source.c_str(),
+  nv_assert(cuLinkAddData(lState, CU_JIT_INPUT_PTX, (void *)ptx_source.c_str(),
                           strlen(ptx_source.c_str()) + 1, 0, 0, 0, 0));
   void *cuOut;
   size_t outSize;
-  CU_ASSERT(cuLinkComplete(lState, &cuOut, &outSize));
+  nv_assert(cuLinkComplete(lState, &cuOut, &outSize));
   std::cout << "jit module size " << outSize << std::endl;
-  MAKE_DEFER(CU_ASSERT(cuLinkDestroy(lState)));
+  MAKE_DEFER(nv_assert(cuLinkDestroy(lState)));
 
   CUmodule hModule;
-  CU_ASSERT(cuModuleLoadData(&hModule, cuOut));
-  MAKE_DEFER(CU_ASSERT(cuModuleUnload(hModule)));
+  nv_assert(cuModuleLoadData(&hModule, cuOut));
+  MAKE_DEFER(nv_assert(cuModuleUnload(hModule)));
 
   CUfunction hKernel = 0;
-  CU_ASSERT(cuModuleGetFunction(&hKernel, hModule, "inc"));
+  nv_assert(cuModuleGetFunction(&hKernel, hModule, "inc"));
 
   {
     int nums[32];
@@ -89,14 +89,14 @@ int main(int argc, char *argv[]) {
     }
     std::cout << std::endl;
     int *d_nums;
-    CUDA_ASSERT(cudaMalloc(&d_nums, sizeof(nums)));
+    nv_assert(cudaMalloc(&d_nums, sizeof(nums)));
     MAKE_DEFER(cudaFree(d_nums));
-    CUDA_ASSERT(cudaMemcpy(d_nums, nums, sizeof(nums), cudaMemcpyHostToDevice));
+    nv_assert(cudaMemcpy(d_nums, nums, sizeof(nums), cudaMemcpyHostToDevice));
 
     void *args[] = {&d_nums};
-    CU_ASSERT(cuLaunchKernel(hKernel, 1, 1, 1, 32, 1, 1, 0, 0, args, 0));
-    CUDA_ASSERT(cudaDeviceSynchronize());
-    CUDA_ASSERT(cudaMemcpy(nums, d_nums, sizeof(nums), cudaMemcpyDeviceToHost));
+    nv_assert(cuLaunchKernel(hKernel, 1, 1, 1, 32, 1, 1, 0, 0, args, 0));
+    nv_assert(cudaDeviceSynchronize());
+    nv_assert(cudaMemcpy(nums, d_nums, sizeof(nums), cudaMemcpyDeviceToHost));
     std::cout << "result data:";
     for (auto beg = std::begin(nums), end = std::end(nums); beg != end; beg++) {
       std::cout << " " << *beg;
