@@ -54,7 +54,9 @@ int main(int argc, char *argv[]) {
   std::cout << "get cuda device idx 0" << std::endl;
 
   // init device context
-  cudaFree(0);
+  CUcontext hContext;
+  nv_assert(cuCtxCreate(&hContext, 0, device));
+  MAKE_DEFER(cuCtxDestroy(hContext));
 
   CUlinkState lState;
 
