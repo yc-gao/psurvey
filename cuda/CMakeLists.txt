@@ -10,6 +10,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3" CACHE STRING "Flags
 
 find_package(CUDAToolkit REQUIRED)
 
-add_executable(ptx_link ptx_link.cc)
-target_link_libraries(ptx_link PUBLIC CUDA::cudart CUDA::cuda_driver)
+add_executable(ptx_jit ptx_jit.cc)
+target_link_libraries(ptx_jit PUBLIC CUDA::cudart CUDA::cuda_driver)
 
