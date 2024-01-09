@@ -1,5 +1,8 @@
+#include <cassert>
 #include <system_error>
 #include <type_traits>
+
+#include "Result.h"
 
 enum class demo_errc {
   no_file = 10,
@@ -34,5 +37,16 @@ inline std::error_code make_error_code(demo_errc e) {
 int main(int argc, char *argv[]) {
   std::error_code ec = std::make_error_code(demo_errc::no_file);
   std::cerr << ec.message() << std::endl;
+
+  {
+    Result<void> result = ec;
+    assert(result.Error());
+  }
+
+  {
+    Result<int> result = 123;
+    assert(result == 123);
+  }
+
   return 0;
 }
