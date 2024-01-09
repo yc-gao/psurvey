@@ -4,6 +4,15 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+#define NVVM_ASSERT(expr)                                                      \
+  do {                                                                         \
+    auto err = (expr);                                                         \
+    if (err != NVVM_SUCCESS) {                                                 \
+      std::cerr << "error libnvvm call failed" << std::endl;                   \
+      exit(-1);                                                                \
+    }                                                                          \
+  } while (0)
+
 #define CU_ASSERT(expr)                                                        \
   do {                                                                         \
     auto err = (expr);                                                         \
