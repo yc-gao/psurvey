@@ -8,5 +8,5 @@ set(LLVM_LINK_COMPONENTS
     Interpreter)
 
 file(GLOB SRCS *.cc)
-add_llvm_executable(llvm-jit ${SRCS})
+add_llvm_executable(jit ${SRCS})
 

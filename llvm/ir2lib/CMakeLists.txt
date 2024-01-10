@@ -9,6 +9,6 @@ set(LLVM_LINK_COMPONENTS
 )
 
 file(GLOB SRCS *.cc)
-add_llvm_executable(llvm-module2lib ${SRCS})
+add_llvm_executable(ir2lib ${SRCS})
 
 

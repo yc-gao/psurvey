@@ -21,7 +21,7 @@ include(AddLLVM)
 include(AddMLIR)
 include(HandleLLVMOptions)
 
-add_subdirectory(llvm-jit)
-add_subdirectory(llvm-module2lib)
+add_subdirectory(jit)
+add_subdirectory(ir2lib)
 add_subdirectory(mlir-demo)
 
