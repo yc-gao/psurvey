@@ -1,70 +1,106 @@
 #pragma once
 #include <fcntl.h>
+#include <set>
+#include <stdexcept>
 #include <sys/epoll.h>
 #include <unistd.h>
 
 #include <cstdint>
 #include <system_error>
 
+enum class Event { NONE, ABORT, READ, WRITE };
+
 struct Callback {
-  virtual void operator()(const std::error_code &ec) = 0;
+  virtual void Dispatch(Event) = 0;
 };
 
 class EventLoop {
   constexpr static int kMaxEvent = 100;
 
-  int epoll_fd;
-  struct epoll_event events[kMaxEvent];
+  volatile bool running_{true};
 
-  bool running_{true};
-
-  void Dispatch(struct epoll_event &event) {
-    Callback *func = (Callback *)(event.data.ptr);
-    (*func)(std::error_code());
-  }
+  int epoll_fd_;
+  struct epoll_event event_pool_[kMaxEvent];
+  std::set<Callback *> cbs_;
 
 public:
-  EventLoop() : epoll_fd(::epoll_create1(0)) {}
+  ~EventLoop() {
+    if (epoll_fd_ != -1) {
+      close(epoll_fd_);
+    }
+  }
+  EventLoop(const EventLoop &) = delete;
+  EventLoop(EventLoop &&) = delete;
+  EventLoop &operator=(const EventLoop &) = delete;
+  EventLoop &operator=(EventLoop &&) = delete;
+
+  EventLoop() : epoll_fd_(::epoll_create1(0)) {
+    if (epoll_fd_ == -1) {
+      throw std::system_error(errno, std::generic_category(),
+                              "epoll_create1 failed");
+    }
+  }
+
+  void Stop() { running_ = false; }
 
   void Run() {
     while (running_) {
-      int nfd = ::epoll_wait(epoll_fd, events, kMaxEvent, -1);
-      for (int i = 0; i < nfd; i++) {
-        Dispatch(events[i]);
+      if (cbs_.empty()) {
+        break;
       }
-      // TODO: exit when empty
+
+      int nfd = ::epoll_wait(epoll_fd_, event_pool_, kMaxEvent, -1);
+      if (nfd < 0) {
+        throw std::system_error(errno, std::generic_category(),
+                                "epoll_wait failed");
+      }
+      for (int i = 0; i < nfd; i++) {
+        Event e;
+        if (event_pool_[i].events | EPOLLIN) {
+          e = Event::READ;
+        } else if (event_pool_[i].events | EPOLLOUT) {
+          e = Event::WRITE;
+        } else {
+          throw std::system_error(errno, std::generic_category(),
+                                  "unknown event");
+        }
+        reinterpret_cast<Callback *>(event_pool_[i].data.ptr)->Dispatch(e);
+      }
     }
-    // TODO: call cb for every event remain
+    for (auto cb : cbs_) {
+      cb->Dispatch(Event::ABORT);
+    }
   }
-  void Attach(int fd, std::uint32_t events, Callback *cb) {
+
+  void Attach(int fd, Event e, Callback *cb) {
     struct epoll_event event;
-    event.events = events;
-    event.data.ptr = (void *)cb;
-    if (::epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &event) == -1) {
-      (*cb)(std::error_code(errno, std::generic_category()));
+    switch (e) {
+    case Event::READ:
+      event.events = EPOLLIN;
+      break;
+    case Event::WRITE:
+      event.events = EPOLLOUT;
+      break;
+    default:
+      throw std::logic_error("unsupport event");
+      break;
+    }
+    event.data.ptr = cb;
+    if (::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &event)) {
+      throw std::system_error(errno, std::generic_category(),
+                              "epoll_ctl failed");
+    }
+    if (!cbs_.insert(cb).second) {
+      throw std::logic_error("fd already inserted");
     }
   }
-  void Detach(int fd) { ::epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, NULL); }
-
-  void Stop() { running_ = false; }
-};
-
-class FileReader {
-  class CallbackImpl : public Callback {
-    void operator()(const std::error_code &ec) override {}
-  };
-
-  EventLoop *loop;
-  int fd;
-  CallbackImpl cb;
-
-public:
-  ~FileReader() {
-    loop->Detach(fd);
-    close(fd);
-  }
-  FileReader(EventLoop *loop, const char *fname)
-      : loop(loop), fd(::open(fname, O_RDONLY | O_NONBLOCK)) {
-    loop->Attach(fd, EPOLLIN, &cb);
+  void Detach(int fd, Callback *cb) {
+    if (!cbs_.erase(cb)) {
+      throw std::logic_error("fd not inserted");
+    }
+    if (::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, NULL)) {
+      throw std::system_error(errno, std::generic_category(),
+                              "epoll_ctl failed");
+    }
   }
 };
