@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     a.Then([]() { std::cout << "a" << std::endl; });
     b.Then([]() { std::cout << "b" << std::endl; });
     c.Then([]() { std::cout << "c" << std::endl; });
-    a.Then(b).Then(c).Then([]() { std::cout << "all" << std::endl; });
+    a.And(b).And(c).Then([]() { std::cout << "all" << std::endl; });
     a.Resolve();
     b.Resolve();
     c.Resolve();
