@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+import os
+import argparse
+import socket
+import struct
+import time
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--role', type=str, default='server')
+    parser.add_argument('-s', '--sock', type=str, default='demo.sock')
+    parser.add_argument('--bs', type=int, default=1024)
+    return parser.parse_args()
+
+
+def do_server(args):
+    try:
+        os.unlink(args.sock)
+    except:
+        pass
+
+    with socket.socket(socket.AF_UNIX) as ss:
+        ss.bind(args.sock)
+        ss.listen(10)
+        while True:
+            conn, _ = ss.accept()
+            with conn:
+                while True:
+                    buf = conn.recv(16)
+                    if not buf:
+                        break
+                    (tm, length) = struct.unpack('>QQ', buf)
+                    if not length:
+                        continue
+                    conn.recv(length)
+                    buf = struct.pack('>Q', tm)
+                    conn.send(buf)
+                    print('recv packet, size {}'.format(length))
+
+
+def do_client(args):
+    header = struct.pack('>Q', args.bs)
+    body = b'\x00' * args.bs
+    with socket.socket(socket.AF_UNIX) as ss:
+        ss.connect(args.sock)
+        durs = []
+        for _ in range(10):
+            tm = time.time_ns()
+            buf = struct.pack('>Q', tm)
+            ss.send(buf)
+            ss.send(header)
+            ss.send(body)
+            buf = ss.recv(8)
+            tm = struct.unpack('>Q', buf)[0]
+            durs.append(time.time_ns() - tm)
+        print(durs)
+        print(max(*durs), min(*durs), sum(durs) / len(durs))
+
+
+def main():
+    args = parse_args()
+    print(args)
+    if args.role == 'server':
+        do_server(args)
+    else:
+        do_client(args)
+
+
+if __name__ == "__main__":
+    main()
