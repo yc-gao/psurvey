@@ -1,32 +1,42 @@
+#include <cassert>
 #include <iostream>
+#include <sstream>
 
+#include "google/protobuf/io/zero_copy_stream_impl.h"
 #include "google/protobuf/text_format.h"
 
-#include "foo.pb.h"
+#include "demo.pb.h"
 
 int main(int argc, char *argv[]) {
-
-  Group g;
   {
-    Person *p = g.add_persons();
-    p->set_name("demo");
+    std::stringstream ss;
+    Demo1 demo1;
+    demo1.set_name("demo");
+    demo1.SerializeToOstream(&ss);
+
+    Demo2 demo2;
+    demo2.ParseFromIstream(&ss);
+    assert(demo2.name() == "demo");
+    google::protobuf::io::OstreamOutputStream os(&std::cout);
+    google::protobuf::TextFormat::Print(demo2, &os);
   }
-  {
-    Person *p = g.add_persons();
-    p->set_name("assd");
-  }
-
-  std::string buf;
-  google::protobuf::TextFormat::PrintToString(g, &buf);
-  std::cout << buf;
 
   {
-    Group g;
-    google::protobuf::TextFormat::ParseFromString(buf, &g);
-    for (auto &&p : g.persons()) {
-      std::cout << p.name() << std::endl;
+    std::stringstream ss;
+    {
+      Demo2 demo2;
+      demo2.set_name("demo");
+      demo2.set_age(12);
+      demo2.SerializeToOstream(&ss);
+    }
+
+    {
+      Demo1 demo1;
+      demo1.ParseFromIstream(&ss);
+      assert(demo1.name() == "demo");
+      google::protobuf::io::OstreamOutputStream os(&std::cout);
+      google::protobuf::TextFormat::Print(demo1, &os);
     }
   }
-
   return 0;
 }

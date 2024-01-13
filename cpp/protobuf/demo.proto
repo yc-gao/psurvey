@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message Demo1 {
+  string name = 1;
+}
+
+message Demo2 {
+  string name = 1;
+  int32 age = 2;
+}
