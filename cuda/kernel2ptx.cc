@@ -35,6 +35,7 @@ std::string Kernel2Ptx(const std::string &kernel_source,
   return ptx;
 }
 
+// TODO: kernel to cubin
 // std::string Kernel2Cubin(const std::string &kernel_source,
 //                          const std::string &name) {
 //   nvrtcProgram prog;
@@ -53,6 +54,7 @@ std::string Kernel2Ptx(const std::string &kernel_source,
 //   return cubin;
 // }
 //
+// TODO: kernel to nvvm
 // std::string Kernel2NVVM(const std::string &kernel_source,
 //                         const std::string &name) {
 //   nvrtcProgram prog;
