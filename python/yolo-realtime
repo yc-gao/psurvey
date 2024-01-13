@@ -9,6 +9,7 @@ def parse_args():
     parser.add_argument('-d', '--device', type=int, default=None)
     parser.add_argument('-f', '--file', type=str, default=None)
     parser.add_argument('-s', '--size', type=str, default=None)
+    parser.add_argument('-w', '--weight', type=str, default='yolov8n.pt')
     return parser.parse_args()
 
 
@@ -27,7 +28,7 @@ def main():
         cap.set(cv2.CV_CAP_PROP_FRAME_WIDTH, w)
         cap.set(cv2.CV_CAP_PROP_FRAME_HEIGHT, h)
 
-    model = YOLO("yolo-Weights/yolov8n.pt")
+    model = YOLO(args.weight)
     classNames = ["person", "bicycle", "car", "motorbike", "aeroplane", "bus", "train", "truck", "boat",
                   "traffic light", "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat",
                   "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe", "backpack", "umbrella",
@@ -47,7 +48,7 @@ def main():
         results = model(img, stream=True)
         for r in results:
             for box in r.boxes:
-                x1, y1, x2, y2 = list(map(int, box.xyxy))
+                x1, y1, x2, y2 = list(map(int, box.xyxy[0]))
                 cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
                 cv2.putText(img, classNames[int(box.cls[0])], [x1, y1],
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
