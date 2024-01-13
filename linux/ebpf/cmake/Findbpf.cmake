@@ -17,9 +17,10 @@ ExternalProject_Add(libbpf-proj
     STEP_TARGETS build
 )
 set(libbpf_INCLUDE_DIRS "${CMAKE_CURRENT_BINARY_DIR}/libbpf")
+set(libbpf_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/libbpf/libbpf.a")
 add_library(bpf STATIC IMPORTED)
 set_target_properties(bpf PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/libbpf/libbpf.a"
+    IMPORTED_LOCATION "${libbpf_LIBRARIES}"
     INTERFACE_INCLUDE_DIRECTORIES   "${libbpf_INCLUDE_DIRS}")
 
 ExternalProject_Add(bpftool-proj
@@ -34,9 +35,10 @@ ExternalProject_Add(bpftool-proj
     INSTALL_COMMAND ""
     STEP_TARGETS build
 )
+set(bpftool_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/bpftoolbootstrap/bpftool")
 add_executable(bpftool IMPORTED)
 set_target_properties(bpftool PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/bpftoolbootstrap/bpftool")
+    IMPORTED_LOCATION "${bpftool_EXECUTABLE}")
 
 find_program(CLANG NAMES clang-17 clang-16 clang-15 clang REQUIRED)
 
