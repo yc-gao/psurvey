@@ -43,7 +43,8 @@ def main():
 
     while cap.isOpened():
         success, img = cap.read()
-        assert success, 'cannot recv frame'
+        if not success:
+            break
 
         results = model(img, stream=True)
         for r in results:
@@ -52,7 +53,7 @@ def main():
                 cv2.rectangle(img, (x1, y1), (x2, y2), (255, 0, 255), 3)
                 cv2.putText(img, classNames[int(box.cls[0])], [x1, y1],
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-        cv2.imshow('Webcam', img)
+        cv2.imshow('yolo', img)
         if cv2.waitKey(1) == ord('q'):
             break
 
