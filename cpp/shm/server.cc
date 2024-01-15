@@ -5,9 +5,10 @@
 
 #include "common.h"
 
-key_t shm_key = 1234;
+const char *shm_path = "/sample";
 
 int main(int argc, char *argv[]) {
+  key_t shm_key = ftok(shm_path, 0);
   int shmid = shmget(shm_key, sizeof(int), 0666 | IPC_CREAT);
   if (shmid == -1) {
     return 1;
