@@ -41,7 +41,7 @@ def main():
                   "teddy bear", "hair drier", "toothbrush"
                   ]
 
-    while True:
+    while cap.isOpened():
         success, img = cap.read()
         assert success, 'cannot recv frame'
 
