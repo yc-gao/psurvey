@@ -29,13 +29,23 @@ int main(int argc, char *argv[]) {
       demo2.set_age(12);
       demo2.SerializeToOstream(&ss);
     }
-
     {
       Demo1 demo1;
       demo1.ParseFromIstream(&ss);
+      ss.clear();
       assert(demo1.name() == "demo");
       google::protobuf::io::OstreamOutputStream os(&std::cout);
       google::protobuf::TextFormat::Print(demo1, &os);
+
+      demo1.SerializeToOstream(&ss);
+    }
+    {
+      Demo2 demo2;
+      demo2.ParseFromIstream(&ss);
+      assert(demo2.name() == "demo");
+      assert(demo2.age() == 12);
+      google::protobuf::io::OstreamOutputStream os(&std::cout);
+      google::protobuf::TextFormat::Print(demo2, &os);
     }
   }
   return 0;
