@@ -42,7 +42,7 @@ set_target_properties(bpf::bpftool PROPERTIES
     IMPORTED_LOCATION "${bpftool_EXECUTABLE}")
 add_dependencies(bpf::bpftool bpftool-proj)
 
-find_program(CLANG NAMES clang-17 clang-16 clang-15 clang REQUIRED)
+find_program(clang_EXECUTABLE NAMES clang-17 clang-16 clang-15 clang REQUIRED)
 
 macro(bpf_generate_object objs)
     if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
@@ -65,7 +65,7 @@ macro(bpf_generate_object objs)
     string(REGEX REPLACE "\.c" ".o" tmp_objs "${srcs}")
     foreach(src obj IN ZIP_LISTS srcs tmp_objs)
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${obj}
-            COMMAND ${CLANG} -target bpf
+            COMMAND ${clang_EXECUTABLE} -target bpf
                 -o ${obj} -c -g -O2
                 -D__TARGET_ARCH_${ARCH}
                 -I${libbpf_INCLUDE_DIRS} -I/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu
