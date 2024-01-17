@@ -1,12 +1,12 @@
+// load: sudo ip link set dev lo xdp obj build/xdp_router.bpf.o sec xdp
+// ubload: sudo ip link set dev lo xdp off
+
 #include <linux/bpf.h>
-#include <linux/if_ether.h>
-#include <linux/ip.h>
-#include <linux/in.h>
+
 #include <bpf/bpf_helpers.h>
 
-SEC("xdp_router")
-int xdp_ip_router(struct xdp_md *ctx) {
-  bpf_printk("xdp_ip_router");
+SEC("xdp")
+int xdp_prog_simple(struct xdp_md *ctx) {
   return XDP_PASS;
 }
 
