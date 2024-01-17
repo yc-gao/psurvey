@@ -14,3 +14,5 @@ find_package(bpf REQUIRED)
 bpf_executable(example SRCS example.cc BPF_SRCS example.bpf.c)
 bpf_executable(kprobe SRCS kprobe.cc BPF_SRCS kprobe.bpf.c)
 
+bpf_objects(xdp_router_bpf_objs xdp_router.bpf.c)
+
