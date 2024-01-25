@@ -1,15 +1,4 @@
-#include <cstddef>
-#include <iterator>
-
-template <unsigned int N> struct Int2Mask;
-
-template <unsigned int N> struct Int2Mask {
-  constexpr static int value = (Int2Mask<N - 1>::value << 1) | 1;
-};
-
-template <> struct Int2Mask<0> {
-  constexpr static int value = 0;
-};
+#include "common.h"
 
 template <typename T, unsigned int warpSize = 32>
 __device__ T warpReduce(T val) {

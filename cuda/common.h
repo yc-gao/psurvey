@@ -50,3 +50,11 @@ public:
 #define CONCATENATE_DETAIL(x, y) x##y
 #define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
 #define MAKE_DEFER(func) Defer CONCATENATE(defer__, __LINE__)([&]() { func; })
+
+template <unsigned int N, typename = int> struct Int2Mask;
+template <unsigned int N, typename T> struct Int2Mask {
+  constexpr static T value = (Int2Mask<N - 1, T>::value << 1) | 1;
+};
+template <typename T> struct Int2Mask<0, T> {
+  constexpr static T value = 0;
+};
