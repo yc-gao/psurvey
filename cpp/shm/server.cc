@@ -34,24 +34,9 @@ int do_systemv() {
 }
 
 int do_posix() {
-  int fd = shm_open(shm_path, O_CREAT | O_RDWR, 0777);
-  if (fd < 0) {
-    return 1;
-  }
-  MAKE_DEFER(shm_unlink(shm_path));
-
-  if (ftruncate(fd, 4096)) {
-    return 1;
-  }
-
-  void *buf = mmap(0, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  if (buf == MAP_FAILED) {
-    return 1;
-  }
-  MAKE_DEFER(munmap(buf, 4096));
-
-  *(int *)(buf) = 100;
-  while (*(int *)(buf) != 101) {
+  auto buf = ShmArea::Create(shm_path, 4096);
+  *(int *)(buf.get()) = 100;
+  while (*(int *)(buf.get()) != 101) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 

@@ -33,22 +33,13 @@ int do_systemv() {
 }
 
 int do_posix() {
-  int fd = shm_open(shm_path, O_RDWR, 0777);
-  if (fd < 0) {
-    return 1;
-  }
+  auto buf = ShmArea::Attach(shm_path, 4096);
 
-  void *buf = mmap(0, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  if (buf == MAP_FAILED) {
-    return 1;
-  }
-  MAKE_DEFER(munmap(buf, 4096));
-
-  while (*(int *)(buf) != 100) {
+  while (*(int *)(buf.get()) != 100) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   std::cout << "recv signal from server" << std::endl;
-  (*(int *)(buf))++;
+  (*(int *)(buf.get()))++;
 
   return 0;
 }
