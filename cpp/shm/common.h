@@ -26,7 +26,7 @@ public:
 #define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
 #define MAKE_DEFER(func) Defer CONCATENATE(defer__, __LINE__)([&]() { func; })
 
-struct ShmArea {
+struct ShmUtil {
   static std::shared_ptr<void> Create(const char *name, std::size_t size,
                                       int oflags, mode_t mode, int mprot) {
     int fd = -1;

@@ -34,7 +34,7 @@ int do_systemv() {
 }
 
 int do_posix() {
-  auto buf = ShmArea::Create(shm_path, 4096);
+  auto buf = ShmUtil::Create(shm_path, 4096);
   *(int *)(buf.get()) = 100;
   while (*(int *)(buf.get()) != 101) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
