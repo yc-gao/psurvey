@@ -76,94 +76,57 @@ do_uprobe_enabled() {
 }
 
 usage() {
-    echo 'usage'
+    echo "usage ftracer [-ls-event] [-ls-filter] [-ls-tracer] [-d duration]"
+    echo "              [-h|--help]"
+    echo "              [--tracer t]"
+    echo "              [--kprobe k]"
+    echo "              [--uprobe u]"
+    echo "              [--event e]"
+    echo "              [--fileter f]"
 }
 
 opt_duration=
 
-opt_kstacktrace=
-opt_ustacktrace=
-
-opt_pid=
-opt_followfork=
-opt_filter=()
-opt_trigger=()
-
+# target
 opt_tracer=
 opt_events=()
 opt_uprobes=()
 opt_kprobes=()
+
+# filter
+opt_filter=()
 
 do_main() {
     if [[ -n "${opt_tracer}" ]]; then
         do_run "echo '$opt_tracer' > '$tracefs/current_tracer'"
         run_atexit "echo nop > $tracefs/current_tracer"
         for f in "${opt_filter[@]}"; do
-            local -a tmp
-            read -r -a tmp <<< "$f"
-            if [ -z "${tmp[*]}" ]; then
+            if [ -z "${f}" ]; then
                 continue
             fi
+            local -a tmp
+            read -r -a tmp <<< "$f"
             if [[ "${tmp[0]}" == "$opt_tracer" ]]; then
                 tmp=("${tmp[@]:1}")
                 do_run "echo '${tmp[*]}' >> '$tracefs/set_ftrace_filter'"
                 run_atexit "echo '!${tmp[*]}' >> $tracefs/set_ftrace_filter"
             fi
         done
-        if [[ -n "$opt_pid" ]]; then
-            do_run "echo '$opt_pid' > '$tracefs/set_ftrace_pid'"
-            run_atexit "echo > $tracefs/set_ftrace_pid"
-            if [[ -n "$opt_followfork" ]]; then
-                do_run "echo 1 > '$tracefs/options/function-fork'"
-                run_atexit "echo 0 > $tracefs/options/function-fork"
-            fi
-        fi
     fi
 
     do_kprobe "${opt_kprobes[@]}"
     do_uprobe "${opt_uprobes[@]}"
     do_event "${opt_events[@]}"
 
-    # cannot get userspace sym
-    if [[ -n "${opt_ustacktrace}${opt_kstacktrace}" ]]; then
-        if [[ -n "${opt_kstacktrace}" ]]; then
-            do_run "echo 1 > '$tracefs/options/stacktrace'"
-            run_atexit "echo 0 > $tracefs/options/stacktrace"
-        fi
-
-        if [[ -n "${opt_ustacktrace}" ]]; then
-            do_run "echo 1 > '$tracefs/options/userstacktrace'"
-            run_atexit "echo 0 > $tracefs/options/userstacktrace"
-
-            do_run "echo 1 > '$tracefs/options/sym-userobj'"
-            run_atexit "echo 0 > $tracefs/options/sym-userobj"
-        fi
-
-        do_run "echo 1 > '$tracefs/options/sym-offset'"
-        run_atexit "echo 0 > $tracefs/options/sym-offset"
-
-        do_run "echo 1 > '$tracefs/options/sym-addr'"
-        run_atexit "echo 0 > $tracefs/options/sym-addr"
-    fi
-
-    if [[ -n "$opt_pid" ]]; then
-        do_run "echo '$opt_pid' > '$tracefs/set_event_pid'"
-        run_atexit "echo > $tracefs/set_event_pid"
-        if [[ -n "$opt_followfork" ]]; then
-            do_run "echo 1 > '$tracefs/options/event-fork'"
-            run_atexit "echo 0 > $tracefs/options/event-fork"
-        fi
-    fi
-
     for f in "${opt_filter[@]}"; do
-        local -a tmp
-        read -r -a tmp <<< "$f"
-        if [ -z "${tmp[*]}" ]; then
+        if [ -z "${f}" ]; then
             continue
         fi
+        local -a tmp
+        read -r -a tmp <<< "$f"
         local e="${tmp[0]}"
-        local filter="$(join ' ' "${tmp[@]:1}")"
         local epath="$tracefs/events/${e//://}"
+        local filter="$(join ' ' "${tmp[@]:1}")"
 
         if [ -e "${epath}/filter" ]; then
             echo "apply event filter: '${f}'"
@@ -172,32 +135,20 @@ do_main() {
         fi
     done
 
-    for t in "${opt_trigger[@]}"; do
-        local -a tmp
-        read -r -a tmp <<< "$t"
-        if [ -z "${tmp[*]}" ]; then
-            continue
-        fi
-        local e="${tmp[0]}"
-        local trigger="$(join ' ' "${tmp[@]:1}")"
-        local epath="$tracefs/events/${e//://}"
-
-        if [ -e "${epath}/trigger" ]; then
-            echo "apply event trigger: '${t}'"
-            do_run "echo '${trigger}' > '$epath/trigger'"
-            run_atexit "echo '!${trigger}' > $epath/trigger"
-        fi
-    done
+    do_run "echo 1 > '$tracefs/tracing_on'"
+    if [ -n "$opt_duration" ]; then
+        run_atexit "cat $tracefs/trace"
+        sleep "$opt_duration"
+        echo 0 > $tracefs/tracing_on
+    else
+        run_atexit "echo 0 > $tracefs/tracing_on"
+        cat "$tracefs/trace_pipe"
+    fi
 }
 
 main() {
     while (( $# )); do
         case "$1" in
-            -h | --help)
-                usage
-                shift
-                exit
-                ;;
             -ls-event)
                 cat $tracefs/available_events
                 shift
@@ -213,32 +164,13 @@ main() {
                 shift
                 exit
                 ;;
+            -h | --help)
+                usage "$@"
+                shift
+                exit
+                ;;
             -d | --duration)
                 opt_duration="$2"
-                shift 2
-                ;;
-            -us | --ustacktrace)
-                opt_ustacktrace=1
-                shift
-                ;;
-            -ks | --kstacktrace)
-                opt_kstacktrace=1
-                shift
-                ;;
-            -p | --pid)
-                opt_pid="$2"
-                shift 2
-                ;;
-            --follow-fork)
-                opt_followfork=1
-                shift
-                ;;
-            --filter)
-                opt_filter+=("$2")
-                shift 2
-                ;;
-            --trigger)
-                opt_trigger+=("$2")
                 shift 2
                 ;;
             --tracer)
@@ -257,22 +189,15 @@ main() {
                 opt_events+=("$2")
                 shift 2
                 ;;
+            --filter)
+                opt_filter+=("$2")
+                shift 2
+                ;;
             *)
                 break
                 ;;
         esac
     done
-
     do_main
-
-    do_run "echo 1 > '$tracefs/tracing_on'"
-    run_atexit "echo 0 > $tracefs/tracing_on"
-
-    if [ -n "$opt_duration" ]; then
-        run_atexit "cat $tracefs/trace"
-        sleep "$opt_duration"
-    else
-        cat "$tracefs/trace_pipe"
-    fi
 }
 
