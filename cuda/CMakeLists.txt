@@ -22,3 +22,5 @@ target_link_libraries(kernel2ptx PUBLIC CUDA::cudart CUDA::nvrtc CUDA::cuda_driv
 add_executable(reduce reduce.cu)
 target_link_libraries(reduce PUBLIC CUDA::cudart)
 
+add_executable(zero_copy zero_copy.cu)
+target_link_libraries(zero_copy PUBLIC CUDA::cudart)
