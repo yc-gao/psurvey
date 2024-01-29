@@ -82,7 +82,8 @@ usage() {
     echo "              [--kprobe k]"
     echo "              [--uprobe u]"
     echo "              [--event e]"
-    echo "              [--fileter f]"
+    echo "              [--filter f]"
+    echo "              [--trigger t]"
 }
 
 opt_duration=
@@ -96,44 +97,60 @@ opt_kprobes=()
 # filter
 opt_filter=()
 
+# action
+opt_trigger=()
+
+do_filter() {
+    # setup filter
+    for f in "${opt_filter[@]}"; do
+        if [[ -z "$f" ]]; then
+            continue
+        fi
+        local -a tmp
+        read -r -a tmp <<< "$f"
+        local target="${tmp[0]}"
+        tmp=("${tmp[@]:1}")
+        if [[ $target == "${opt_tracer}" ]]; then
+            do_run "echo ${tmp[*]} >> $tracefs/set_ftrace_filter"
+            run_atexit "echo !${tmp[*]} >> $tracefs/set_ftrace_filter"
+        elif [[ ${opt_events[*]} == *${target}* && -d $tracefs/events/${target//://} ]]; then
+            local epath="${target//://}"
+            do_run "echo ${tmp[*]} > $tracefs/events/${epath}/filter"
+            run_atexit "echo 0 > $tracefs/events/${epath}/filter"
+        fi
+    done
+}
+
+do_trigger() {
+    # setup trigger
+    for f in "${opt_trigger[@]}"; do
+        if [[ -z "$f" ]]; then
+            continue
+        fi
+        local -a tmp
+        read -r -a tmp <<< "$f"
+        local target="${tmp[0]}"
+        tmp=("${tmp[@]:1}")
+        if [[ ${opt_events[*]} == *${target}* && -d $tracefs/events/${target//://} ]]; then
+            local epath="${target//://}"
+            do_run "echo ${tmp[*]} > $tracefs/events/${epath}/trigger"
+            run_atexit "echo !${tmp[*]} > $tracefs/events/${epath}/trigger"
+        fi
+    done
+}
+
 do_main() {
     if [[ -n "${opt_tracer}" ]]; then
         do_run "echo '$opt_tracer' > '$tracefs/current_tracer'"
         run_atexit "echo nop > $tracefs/current_tracer"
-        for f in "${opt_filter[@]}"; do
-            if [ -z "${f}" ]; then
-                continue
-            fi
-            local -a tmp
-            read -r -a tmp <<< "$f"
-            if [[ "${tmp[0]}" == "$opt_tracer" ]]; then
-                tmp=("${tmp[@]:1}")
-                do_run "echo '${tmp[*]}' >> '$tracefs/set_ftrace_filter'"
-                run_atexit "echo '!${tmp[*]}' >> $tracefs/set_ftrace_filter"
-            fi
-        done
     fi
 
     do_kprobe "${opt_kprobes[@]}"
     do_uprobe "${opt_uprobes[@]}"
     do_event "${opt_events[@]}"
 
-    for f in "${opt_filter[@]}"; do
-        if [ -z "${f}" ]; then
-            continue
-        fi
-        local -a tmp
-        read -r -a tmp <<< "$f"
-        local e="${tmp[0]}"
-        local epath="$tracefs/events/${e//://}"
-        local filter="$(join ' ' "${tmp[@]:1}")"
-
-        if [ -e "${epath}/filter" ]; then
-            echo "apply event filter: '${f}'"
-            do_run "echo '${filter}' > '$epath/filter'"
-            run_atexit "echo 0 > $epath/filter"
-        fi
-    done
+    do_filter
+    do_trigger
 
     do_run "echo 1 > '$tracefs/tracing_on'"
     if [ -n "$opt_duration" ]; then
@@ -193,11 +210,15 @@ main() {
                 opt_filter+=("$2")
                 shift 2
                 ;;
+            --trigger)
+                opt_trigger+=("$2")
+                shift 2
+                ;;
             *)
                 break
                 ;;
         esac
     done
-    do_main
+    do_main "$@"
 }
 
