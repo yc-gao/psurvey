@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  web:
+    image: nginx
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./nginx:/etc/nginx
+    restart: unless-stopped
+
