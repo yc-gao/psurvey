@@ -140,17 +140,18 @@ do_trigger() {
 }
 
 do_main() {
+
+    do_kprobe "${opt_kprobes[@]}"
+    do_uprobe "${opt_uprobes[@]}"
+
+    do_filter
+    do_trigger
+
+    do_event "${opt_events[@]}"
     if [[ -n "${opt_tracer}" ]]; then
         do_run "echo '$opt_tracer' > '$tracefs/current_tracer'"
         run_atexit "echo nop > $tracefs/current_tracer"
     fi
-
-    do_kprobe "${opt_kprobes[@]}"
-    do_uprobe "${opt_uprobes[@]}"
-    do_event "${opt_events[@]}"
-
-    do_filter
-    do_trigger
 
     do_run "echo 1 > '$tracefs/tracing_on'"
     if [ -n "$opt_duration" ]; then
