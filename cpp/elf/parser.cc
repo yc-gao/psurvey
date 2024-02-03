@@ -67,15 +67,36 @@ Elf_Shdr *elf_find_section(Elf_Ehdr *elf_hdr, const char *name) {
 
 void DumoSymbol(Elf_Ehdr *elf_hdr) {
   Elf_Shdr *str_section = elf_find_section(elf_hdr, ".strtab");
-  Elf_Shdr *tab_section = elf_find_section(elf_hdr, ".symtab");
-  assert(str_section && tab_section);
-  for (int j = 0; j < tab_section->sh_size / tab_section->sh_entsize; j++) {
-    Elf_Sym *sym = (Elf_Sym *)((char *)elf_hdr + tab_section->sh_offset +
-                               j * tab_section->sh_entsize);
-    std::cout << "idx: " << std::dec << j << ", name: "
-              << (const char *)(elf_hdr) + str_section->sh_offset + sym->st_name
-              << ", st_shndx: " << sym->st_shndx << ", value: 0x" << std::hex
-              << sym->st_value << std::endl;
+  assert(str_section);
+
+  {
+    Elf_Shdr *tab_section = elf_find_section(elf_hdr, ".dynsym");
+    assert(tab_section);
+    std::cout << "dynsym: " << std::endl;
+    for (int j = 0; j < tab_section->sh_size / tab_section->sh_entsize; j++) {
+      Elf_Sym *sym = (Elf_Sym *)((char *)elf_hdr + tab_section->sh_offset +
+                                 j * tab_section->sh_entsize);
+      std::cout << "idx: " << std::dec << j << ", name: "
+                << (const char *)(elf_hdr) + str_section->sh_offset +
+                       sym->st_name
+                << ", st_shndx: " << sym->st_shndx << ", value: 0x" << std::hex
+                << sym->st_value << std::endl;
+    }
+  }
+  {
+
+    Elf_Shdr *tab_section = elf_find_section(elf_hdr, ".symtab");
+    assert(tab_section);
+    std::cout << "symtab: " << std::endl;
+    for (int j = 0; j < tab_section->sh_size / tab_section->sh_entsize; j++) {
+      Elf_Sym *sym = (Elf_Sym *)((char *)elf_hdr + tab_section->sh_offset +
+                                 j * tab_section->sh_entsize);
+      std::cout << "idx: " << std::dec << j << ", name: "
+                << (const char *)(elf_hdr) + str_section->sh_offset +
+                       sym->st_name
+                << ", st_shndx: " << sym->st_shndx << ", value: 0x" << std::hex
+                << sym->st_value << std::endl;
+    }
   }
 }
 
