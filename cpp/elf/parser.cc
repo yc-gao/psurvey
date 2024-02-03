@@ -52,17 +52,28 @@ Elf_Shdr *elf_get_section(Elf_Ehdr *elf_hdr, int idx) {
                       elf_hdr->e_shentsize * idx);
 }
 
+const char *section_get_name(Elf_Ehdr *elf_hdr, Elf_Shdr *elf_shdr) {
+  Elf_Shdr *str = elf_get_section(elf_hdr, elf_hdr->e_shstrndx);
+  return (const char *)(elf_hdr) + str->sh_offset + elf_shdr->sh_name;
+}
+
 Elf_Shdr *elf_find_section(Elf_Ehdr *elf_hdr, const char *name) {
   Elf_Shdr *str = elf_get_section(elf_hdr, elf_hdr->e_shstrndx);
   for (int i = 0; i < elf_hdr->e_shnum; i++) {
     Elf_Shdr *elf_shdr = elf_get_section(elf_hdr, i);
-    const char *tmp =
-        (const char *)(elf_hdr) + str->sh_offset + elf_shdr->sh_name;
-    if (strcmp(name, tmp) == 0) {
+    if (strcmp(name, section_get_name(elf_hdr, elf_shdr)) == 0) {
       return elf_shdr;
     }
   }
   return nullptr;
+}
+
+void DumpSection(Elf_Ehdr *elf_hdr) {
+  for (int i = 0; i < elf_hdr->e_shnum; i++) {
+    Elf_Shdr *elf_shdr = elf_get_section(elf_hdr, i);
+    std::cout << "idx: " << i
+              << ", name: " << section_get_name(elf_hdr, elf_shdr) << std::endl;
+  }
 }
 
 void DumoSymbol(Elf_Ehdr *elf_hdr) {
@@ -105,6 +116,7 @@ int main(int argc, char *argv[]) {
   FileMapping fmap(argv[1]);
 
   Elf_Ehdr *elf_hdr = (Elf_Ehdr *)fmap.Addr();
+  DumpSection(elf_hdr);
   DumoSymbol(elf_hdr);
   return 0;
 }
