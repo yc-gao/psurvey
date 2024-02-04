@@ -45,8 +45,8 @@ class TokenEvaler {
     std::vector<Token> res;
     std::stack<Token> sop;
 
-    std::map<char, int> op2prio{
-        {'(', 0}, {'+', 1}, {'-', 1}, {'*', 2}, {'/', 2}};
+    std::map<char, int> op2prio{{'(', 0}, {'+', 1}, {'-', 1},
+                                {'*', 2}, {'/', 2}, {'%', 2}};
 
     res.reserve(tokens.size());
     for (int i = 0; i < tokens.size(); i++) {
@@ -132,6 +132,9 @@ public:
           break;
         case '/':
           st.push(lhs / rhs);
+          break;
+        case '%':
+          st.push(lhs % rhs);
           break;
         default:
           throw std::logic_error("illegal token");
@@ -223,6 +226,7 @@ public:
     case '-':
     case '*':
     case '/':
+    case '%':
       return {this, pos, 1, TokenType::OP};
       break;
     case ')':
@@ -242,6 +246,7 @@ public:
         case '-':
         case '*':
         case '/':
+        case '%':
         case '(':
         case ')':
           at_end = true;
@@ -295,7 +300,7 @@ void print(const std::vector<Token> &tokens) {
 }
 
 int main(int argc, char *argv[]) {
-  std::string str("frame / 5 * 3 + 2");
+  std::string str("frame % 5");
   Tokenizer tokenizer(str);
 
   std::vector<Token> tokens;
@@ -303,20 +308,16 @@ int main(int argc, char *argv[]) {
 
   TokenEvaler evaler(std::move(tokens));
   std::int64_t val;
-  for (std::size_t i = 0; i < 100; i++) {
-    {
-      {
-        TimeMersure demo("evaler");
-        val = evaler.Eval({{"frame", i}});
-      }
-      std::cout << val << std::endl;
+  {
+    TimeMersure demo("evaler");
+    for (std::size_t i = 0; i < 100; i++) {
+      val = evaler.Eval({{"frame", i}});
     }
-    {
-      {
-        TimeMersure demo("normal");
-        val = i / 5 * 3 + 2;
-      }
-      std::cout << val << std::endl;
+  }
+  {
+    TimeMersure demo("native");
+    for (std::size_t i = 0; i < 100; i++) {
+      val = i % 5;
     }
   }
   return 0;
