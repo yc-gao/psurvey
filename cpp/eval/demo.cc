@@ -5,6 +5,7 @@
 #include <iterator>
 #include <map>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -15,25 +16,24 @@ struct Token {
   TokenType type;
   std::string tok;
   union {
-    std::size_t val;
+    std::int64_t val;
     char op;
   };
 
   Token(TokenType type, std::string tok) : type(type), tok(tok) {}
   Token(TokenType type, char op) : type(type), op(op) {}
-  Token(TokenType type, std::size_t val) : type(type), val(val) {}
+  Token(TokenType type, std::int64_t val) : type(type), val(val) {}
 
   friend std::ostream &operator<<(std::ostream &os, const Token &tok) {
+    os << "Token{type=" << static_cast<int>(tok.type);
     if (tok.type == TokenType::OP || tok.type == TokenType::BRACKET) {
-      os << "Token{"
-         << "type=" << static_cast<int>(tok.type) << ", op=" << tok.op;
+      os << ", op=" << tok.op;
     } else if (tok.type == TokenType::INT) {
-      os << "Token{"
-         << "type=" << static_cast<int>(tok.type) << ", val=" << tok.val << "}";
+      os << ", val=" << tok.val;
     } else {
-      os << "Token{"
-         << "type=" << static_cast<int>(tok.type) << ", tok=" << tok.tok;
+      os << ", tok=" << tok.tok;
     }
+    os << "}";
     return os;
   }
 };
@@ -46,7 +46,7 @@ class TokenEvaler {
     std::stack<Token> sop;
 
     std::map<char, int> op2prio{
-        {'+', 1}, {'-', 1}, {'*', 2}, {'/', 2}, {'(', 0}};
+        {'(', 0}, {'+', 1}, {'-', 1}, {'*', 2}, {'/', 2}};
 
     res.reserve(tokens.size());
     for (int i = 0; i < tokens.size(); i++) {
@@ -76,14 +76,15 @@ class TokenEvaler {
             res.emplace_back(std::move(sop.top()));
             sop.pop();
           }
-          // ASSERT: must be (
-          assert(!sop.empty() && sop.top().op == '(');
+          if (sop.empty() || sop.top().type != TokenType::BRACKET ||
+              sop.top().op != '(') {
+            throw std::logic_error("illegal expr");
+          }
           sop.pop();
         }
       } break;
       default:
-        // ASSERT: cannot reatch
-        assert(0);
+        throw std::logic_error("illegal token type");
         break;
       }
     }
@@ -104,8 +105,8 @@ public:
     ShuntingYard(this->tokens);
   }
 
-  std::size_t Eval(const std::unordered_map<std::string, std::size_t> &vars) {
-    std::stack<std::size_t> st;
+  std::int64_t Eval(const std::map<std::string, std::int64_t> &vars) {
+    std::stack<std::int64_t> st;
     for (int i = 0; i < tokens.size(); i++) {
       switch (tokens[i].type) {
       case TokenType::INT:
@@ -115,9 +116,9 @@ public:
         st.push(vars.at(tokens[i].tok));
         break;
       case TokenType::OP: {
-        std::size_t rhs = st.top();
+        std::int64_t rhs = st.top();
         st.pop();
-        std::size_t lhs = st.top();
+        std::int64_t lhs = st.top();
         st.pop();
         switch (tokens[i].op) {
         case '+':
@@ -133,16 +134,18 @@ public:
           st.push(lhs / rhs);
           break;
         default:
-          assert(0);
+          throw std::logic_error("illegal token");
           break;
         }
       } break;
       default:
-        assert(0);
+        throw std::logic_error("illegal expr");
         break;
       }
     }
-    assert(st.size() == 1);
+    if (st.size() != 1) {
+      throw std::logic_error("illegal expr");
+    }
     return st.top();
   }
 };
@@ -160,7 +163,7 @@ public:
     std::size_t size;
     TokenType type;
 
-    TokenizerIterator() = default;
+    TokenizerIterator() : TokenizerIterator(nullptr, 0, 0, TokenType()) {}
 
     TokenizerIterator(Tokenizer *tokenizer, std::size_t pos, std::size_t size,
                       TokenType type)
@@ -170,7 +173,7 @@ public:
       if (type == TokenType::OP || type == TokenType::BRACKET) {
         return Token(type, tokenizer->At(pos));
       } else if (type == TokenType::INT) {
-        std::size_t val = std::stoll(tokenizer->Str(pos, size));
+        std::int64_t val = std::stoll(tokenizer->Str(pos, size));
         return Token(type, val);
       } else {
         return Token(type, tokenizer->Str(pos, size));
@@ -183,7 +186,7 @@ public:
     }
     TokenizerIterator operator++(int) {
       auto tmp = *this;
-      *this = tokenizer->begin(pos + size);
+      ++*this;
       return tmp;
     }
     bool operator==(const TokenizerIterator &other) const {
@@ -201,7 +204,7 @@ public:
   char At(std::size_t pos) const { return buf_[pos]; }
   std::string Str(std::size_t pos, std::size_t size) const {
     if (pos + size > size_) {
-      return "";
+      throw std::out_of_range("out of range exception");
     }
     return std::string(buf_ + pos, size);
   }
@@ -299,7 +302,7 @@ int main(int argc, char *argv[]) {
   std::copy(tokenizer.begin(), tokenizer.end(), std::back_inserter(tokens));
 
   TokenEvaler evaler(std::move(tokens));
-  std::size_t val;
+  std::int64_t val;
   for (std::size_t i = 0; i < 100; i++) {
     {
       {
@@ -318,4 +321,3 @@ int main(int argc, char *argv[]) {
   }
   return 0;
 }
-
