@@ -8,6 +8,8 @@ opt_link_dirs=()
 opt_link_libs=()
 opt_ignore_libs=()
 
+rpath_link_dirs=()
+
 warn() {
     echo "$@" 1>&2
 }
@@ -23,6 +25,16 @@ find_lib_path() {
         echo "${lname}"
         return
     fi
+    local link_dir
+    # find lib in rpath
+    for link_dir in "${rpath_link_dirs[@]}"; do
+        if [[ -f "${link_dir}/${lname}" ]]; then
+            echo "${link_dir}/${lname}"
+            return
+        fi
+    done
+
+    # find lib in user defined path
     for link_dir in "${opt_link_dirs[@]}"; do
         if [[ -f "${link_dir}/${lname}" ]]; then
             echo "${link_dir}/${lname}"
@@ -56,6 +68,7 @@ do_pack() {
     fi
     local lpath
     local lname
+    IFS=":" read -r -a rpath_link_dirs <<< "$(patchelf --print-rpath "$1")"
     patchelf --print-needed "$1" \
         | while read -r; do
             if [[ -z "${REPLY}" ]]; then
