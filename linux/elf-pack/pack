@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+set -e
+
+opt_output=out
+opt_type=bin
+
+opt_link_dirs=()
+opt_link_libs=()
+opt_ignore_libs=()
+
+warn() {
+    echo "$@" 1>&2
+}
+
+err() {
+    warn "$@"
+    exit 1
+}
+
+find_lib_path() {
+    local lname="$1"
+    if [[ "${lname}" =~ /.* ]]; then
+        echo "${lname}"
+        return
+    fi
+    for link_dir in "${opt_link_dirs[@]}"; do
+        if [[ -f "${link_dir}/${lname}" ]]; then
+            echo "${link_dir}/${lname}"
+            return
+        fi
+    done
+    # TODO: find lib
+}
+
+do_fix() {
+    local name
+    local path
+    path="$1"
+    patchelf --set-rpath "\$ORIGIN/../lib" "${path}"
+    patchelf --print-needed "${path}" \
+        | while read -r; do
+            local lname
+            local lpath
+            lpath="${REPLY}"
+            lname="$(basename "${lpath}")"
+            if [[ "${lpath}" =~ /.* ]]; then
+                patchelf --remove-needed "${lpath}" "${path}"
+                patchelf --add-needed "${lname}" "${path}"
+            fi
+        done
+}
+
+do_pack() {
+    if [[ "${opt_ignore_libs[*]}" =~ $(basename "$1") ]]; then
+        return
+    fi
+    local lpath
+    local lname
+    patchelf --print-needed "$1" \
+        | while read -r; do
+            if [[ -z "${REPLY}" ]]; then
+                continue
+            fi
+            lpath="$(find_lib_path "${REPLY}")"
+            if [[ -z "${lpath}" ]]; then
+                err "can't find ${REPLY}"
+            fi
+            lname="$(basename "${lpath}")"
+            do_pack "${lpath}"
+            cp "${lpath}" "${opt_output}/lib"
+            do_fix "${opt_output}/lib/${lname}"
+        done
+}
+
+do_main() {
+    mkdir -p "${opt_output}"/{lib,bin}
+    local name
+    local path
+    local lpath
+    local lname
+    for path in "$@"; do
+        name="$(basename "${path}")"
+        do_pack "${path}"
+        if [[ "${opt_type}" == "bin" ]]; then
+            cp "${path}" "${opt_output}/bin"
+            path="${opt_output}/bin/${name}"
+        else
+            cp "${path}" "${opt_output}/lib"
+            path="${opt_output}/lib/${name}"
+        fi
+        do_fix "${path}"
+        for lpath in "${opt_link_libs[@]}"; do
+            lname="$(basename "${lpath}")"
+            if [[ ! -e "${opt_output}/lib/${lname}" ]]; then
+                do_pack "${lpath}"
+                cp "${lpath}" "${opt_output}/lib"
+                do_fix "${opt_output}/lib/${lname}"
+            fi
+            patchelf --add-needed "${lname}" "${path}"
+        done
+    done
+}
+
+usage() {
+  # TODO: dump help message
+  true
+}
+
+main() {
+    while (($#)); do
+        case $1 in
+            -h | --help)
+                usage
+                shift
+                exit
+                ;;
+            -o | --output)
+                opt_output="$2"
+                shift 2
+                ;;
+            -t | --type)
+                opt_type="$2"
+                shift 2
+                ;;
+            -L)
+                opt_link_dirs+=("$2")
+                shift 2
+                ;;
+            -l)
+                opt_link_libs+=("$2")
+                shift 2
+                ;;
+            -i)
+                opt_ignore_libs+=("$2")
+                shift 2
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+    do_main "$@"
+}
+
+main "$@"
