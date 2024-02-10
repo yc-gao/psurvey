@@ -41,7 +41,6 @@ find_lib_path() {
             return
         fi
     done
-    # TODO: find lib
 }
 
 do_fix() {
