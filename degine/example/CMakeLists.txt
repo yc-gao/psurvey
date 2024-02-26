@@ -1,2 +1,2 @@
-add_subdirectory(add)
+add_subdirectory(hello_world)
 

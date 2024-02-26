@@ -1,18 +1,10 @@
 #pragma once
-
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <unordered_map>
 
-namespace degine {
-
-struct EngineOptions {
-  std::string model;
-  std::string format;
-  std::string accelerator;
-};
-
-struct Engine {
-  static std::unique_ptr<Engine> BuildEngine(const EngineOptions &);
-};
-
-} // namespace degine
+#include "degine/DegineContext.h"
+#include "degine/Engine.h"
+#include "degine/degine.h"
+#include "degine/ir/Model.h"
