@@ -89,18 +89,17 @@ public:
       std::uint64_t nr;
       std::uint64_t time_enabled;
       std::uint64_t time_running;
-    };
-    struct read_item {
-      std::uint64_t value;
-      std::uint64_t id;
+      struct {
+        std::uint64_t value;
+        std::uint64_t id;
+      } cntr[];
     };
     read_format *header = (read_format *)buf.get();
     time_enabled = header->time_enabled;
     time_running = header->time_running;
 
-    read_item *items = (read_item *)((char *)buf.get() + sizeof(read_format));
     for (std::uint64_t i = 0; i < header->nr; i++) {
-      *id2buf.at(items[i].id) = items[i].value;
+      *id2buf.at(header->cntr[i].id) = header->cntr[i].value;
     }
   }
 };
