@@ -72,19 +72,20 @@ void do_read(pid_t pid = 266267) {
   close(perf_fd);
 }
 
-void do_period(pid_t pid = 268181) {
+void do_period(pid_t pid = 291080) {
   struct perf_event_attr attr;
   std::memset(&attr, 0, sizeof(attr));
   attr.size = sizeof(attr);
 
-  attr.type = PERF_TYPE_HARDWARE;
-  attr.config = PERF_COUNT_HW_INSTRUCTIONS;
+  attr.type = PERF_TYPE_SOFTWARE;
+  attr.config = PERF_COUNT_SW_CPU_CLOCK;
 
   // attr.freq = 1;
   // attr.sample_freq = 10;
   attr.sample_period = 100000;
   attr.wakeup_events = 1;
-  attr.sample_type = PERF_SAMPLE_TIME | PERF_SAMPLE_TID | PERF_SAMPLE_READ;
+  attr.sample_type =
+      PERF_SAMPLE_TIME | PERF_SAMPLE_TID | PERF_SAMPLE_READ | PERF_SAMPLE_CPU;
 
   attr.disabled = 1;
   attr.exclude_kernel = 1;
@@ -106,36 +107,39 @@ void do_period(pid_t pid = 268181) {
   ioctl(perf_fd, PERF_EVENT_IOC_RESET, 0);
   ioctl(perf_fd, PERF_EVENT_IOC_ENABLE, 0);
   struct pollfd pfd = {.fd = perf_fd, .events = POLLIN};
+  struct perf_event_mmap_page *perf_info =
+      (struct perf_event_mmap_page *)perf_mmap;
   while (running) {
     if (poll(&pfd, 1, -1) == -1) {
       throw std::system_error(errno, std::generic_category());
     }
     struct perf_format {
-      struct perf_event_header header;
       std::uint32_t pid, tid; /* if PERF_SAMPLE_TID */
       std::uint64_t time;     /* if PERF_SAMPLE_TIME */
       // std::uint64_t addr;      /* if PERF_SAMPLE_ADDR */
       // std::uint64_t id;        /* if PERF_SAMPLE_ID */
       // std::uint64_t stream_id; /* if PERF_SAMPLE_STREAM_ID */
-      // std::uint32_t cpu, res;  /* if PERF_SAMPLE_CPU */
+      std::uint32_t cpu, res; /* if PERF_SAMPLE_CPU */
       // std::uint64_t period;    /* if PERF_SAMPLE_PERIOD */
       struct {
         std::uint64_t value;
       } v; /* if PERF_SAMPLE_READ */
     };
 
-    struct perf_event_mmap_page *perf_info =
-        (struct perf_event_mmap_page *)perf_mmap;
-
     while (perf_info->data_tail < perf_info->data_head) {
-      perf_format *perf_data =
-          (perf_format *)((char *)perf_mmap + perf_info->data_offset +
-                          (perf_info->data_tail % page_size));
-      if (perf_data->header.type != PERF_RECORD_SAMPLE) {
+      struct perf_event_header *header =
+          (struct perf_event_header *)((char *)perf_mmap +
+                                       perf_info->data_offset +
+                                       (perf_info->data_tail % page_size));
+
+      if (header->type == PERF_RECORD_SAMPLE) {
+        perf_format *perf_data =
+            (perf_format *)((char *)header + sizeof(perf_event_header));
+        std::cout << header->size << "\t" << perf_data->time << "\t"
+                  << perf_data->v.value << "\n";
         break;
       }
-      std::cout << perf_data->time << "\t" << perf_data->v.value << "\n";
-      perf_info->data_tail += sizeof(perf_format);
+      perf_info->data_tail += header->size;
     }
   }
   ioctl(perf_fd, PERF_EVENT_IOC_DISABLE, 0);
