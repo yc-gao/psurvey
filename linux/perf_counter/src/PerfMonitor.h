@@ -17,7 +17,7 @@ class PerfMonitor {
 
   std::uint64_t buf_size;
   std::unique_ptr<char[]> buf;
-  std::unordered_map<std::uint64_t, std::uint64_t *> id2val;
+  std::unordered_map<std::uint64_t, std::uint64_t *> id2buf;
 
   std::uint64_t time_enabled;
   std::uint64_t time_running;
@@ -26,25 +26,8 @@ public:
   PerfMonitor(std::size_t buf_size = 4096)
       : perf_fd(-1), buf_size(buf_size), buf(new char[buf_size]) {}
 
-  void Monitor(struct perf_event_attr *attr, int pid = 0, int cpu = -1,
-               std::uint64_t *val = nullptr) {
-    int fd = syscall(SYS_perf_event_open, attr, pid, cpu, perf_fd, 0);
-    if (fd == -1) {
-      throw std::system_error(errno, std::generic_category());
-    }
-    if (perf_fd == -1) {
-      perf_fd = fd;
-    }
-    std::uint64_t perf_id;
-    if (-1 == ioctl(fd, PERF_EVENT_IOC_ID, &perf_id)) {
-      close(fd);
-      throw std::system_error(errno, std::generic_category());
-    }
-    id2val.emplace(perf_id, val);
-  }
-
   void Monitor(perf_type_id type, std::uint64_t eventid, int pid = 0,
-               int cpu = -1, std::uint64_t *val = nullptr) {
+               int cpu = -1, std::uint64_t *buf = nullptr) {
     struct perf_event_attr attr;
     memset(&attr, 0, sizeof(attr));
     attr.type = type;
@@ -58,15 +41,27 @@ public:
     attr.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID |
                        PERF_FORMAT_TOTAL_TIME_ENABLED |
                        PERF_FORMAT_TOTAL_TIME_RUNNING;
-    Monitor(&attr, pid, cpu, val);
+
+    int fd = syscall(SYS_perf_event_open, &attr, pid, cpu, perf_fd, 0);
+    if (fd == -1) {
+      throw std::system_error(errno, std::generic_category());
+    }
+    std::uint64_t id;
+    if (-1 == ioctl(fd, PERF_EVENT_IOC_ID, &id)) {
+      throw std::system_error(errno, std::generic_category());
+    }
+    if (perf_fd == -1) {
+      perf_fd = fd;
+    }
+    id2buf.emplace(id, buf);
   }
   void Monitor(perf_hw_id eventid, int pid = 0, int cpu = -1,
-               std::uint64_t *val = nullptr) {
-    Monitor(PERF_TYPE_HARDWARE, pid, cpu, eventid, val);
+               std::uint64_t *buf = nullptr) {
+    Monitor(PERF_TYPE_HARDWARE, pid, cpu, eventid, buf);
   }
   void Monitor(perf_sw_ids eventid, int pid = 0, int cpu = -1,
-               std::uint64_t *val = nullptr) {
-    Monitor(PERF_TYPE_SOFTWARE, pid, cpu, eventid, val);
+               std::uint64_t *buf = nullptr) {
+    Monitor(PERF_TYPE_SOFTWARE, pid, cpu, eventid, buf);
   }
 
   void Begin() {
@@ -81,6 +76,9 @@ public:
     if (-1 == ioctl(perf_fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP)) {
       throw std::runtime_error("can not enable perf event");
     }
+  }
+
+  void Update() {
     auto size = read(perf_fd, buf.get(), buf_size);
     if (size == -1) {
       throw std::system_error(errno, std::generic_category());
@@ -102,7 +100,7 @@ public:
 
     read_item *items = (read_item *)((char *)buf.get() + sizeof(read_format));
     for (std::uint64_t i = 0; i < header->nr; i++) {
-      *id2val.at(items[i].id) = items[i].value;
+      *id2buf.at(items[i].id) = items[i].value;
     }
   }
 };
