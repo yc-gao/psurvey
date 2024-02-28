@@ -57,11 +57,11 @@ public:
   }
   void Monitor(perf_hw_id eventid, int pid = 0, int cpu = -1,
                std::uint64_t *buf = nullptr) {
-    Monitor(PERF_TYPE_HARDWARE, pid, cpu, eventid, buf);
+    Monitor(PERF_TYPE_HARDWARE, eventid, pid, cpu, buf);
   }
   void Monitor(perf_sw_ids eventid, int pid = 0, int cpu = -1,
                std::uint64_t *buf = nullptr) {
-    Monitor(PERF_TYPE_SOFTWARE, pid, cpu, eventid, buf);
+    Monitor(PERF_TYPE_SOFTWARE, eventid, pid, cpu, buf);
   }
 
   void Begin() {

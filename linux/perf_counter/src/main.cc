@@ -21,13 +21,13 @@ void do_perf0() {
 
   monitor.Begin();
   for (int i = 0; i < 10; i++) {
-    std::cout << "fub10 " << fib(10) << std::endl;
+    fib(10);
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    monitor.Update();
+    std::cout << i << " cycles " << cycles << std::endl;
+    std::cout << i << " insts " << insts << std::endl;
   }
   monitor.End();
-
-  std::cout << "cycles " << cycles << std::endl;
-  std::cout << "insts " << insts << std::endl;
 }
 
 int main(int argc, char *argv[]) {
