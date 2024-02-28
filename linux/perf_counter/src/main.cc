@@ -1,36 +1,35 @@
+#include <csignal>
 #include <cstdint>
 #include <iostream>
 #include <thread>
 
 #include "PerfMonitor.h"
+#include "Rate.h"
 
-int fib(int n) {
-  if (n == 1 || n == 0) {
-    return 1;
-  }
-  return fib(n - 1) + fib(n - 2);
-}
-void do_perf0() {
+bool running{true};
+
+void do_perf0(int pid) {
   PerfMonitor monitor;
 
-  std::uint64_t cycles;
-  monitor.Monitor(PERF_COUNT_HW_CPU_CYCLES, 0, -1, &cycles);
-
   std::uint64_t insts;
-  monitor.Monitor(PERF_COUNT_HW_INSTRUCTIONS, 0, -1, &insts);
+  monitor.Monitor(PERF_COUNT_HW_INSTRUCTIONS, pid, -1, &insts);
 
   monitor.Begin();
-  for (int i = 0; i < 10; i++) {
-    fib(10);
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  Rate rate(100);
+  while (running && rate.Ok()) {
     monitor.Update();
-    std::cout << i << " cycles " << cycles << std::endl;
-    std::cout << i << " insts " << insts << std::endl;
+    std::cout << insts << '\n';
   }
   monitor.End();
 }
 
 int main(int argc, char *argv[]) {
-  do_perf0();
+  std::signal(SIGINT, [](int) { running = false; });
+
+  int pid = 0;
+  if (argc == 2) {
+    pid = atoi(argv[1]);
+  }
+  do_perf0(pid);
   return 0;
 }
