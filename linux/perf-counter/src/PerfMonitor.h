@@ -26,6 +26,22 @@ public:
   PerfMonitor(std::size_t buf_size = 4096)
       : perf_fd(-1), buf_size(buf_size), buf(new char[buf_size]) {}
 
+  void Monitor(struct perf_event_attr *attr, int pid = 0, int cpu = -1,
+               std::uint64_t *buf = nullptr) {
+    int fd = syscall(SYS_perf_event_open, attr, pid, cpu, perf_fd, 0);
+    if (fd == -1) {
+      throw std::system_error(errno, std::generic_category());
+    }
+    std::uint64_t id;
+    if (-1 == ioctl(fd, PERF_EVENT_IOC_ID, &id)) {
+      throw std::system_error(errno, std::generic_category());
+    }
+    if (perf_fd == -1) {
+      perf_fd = fd;
+    }
+    id2buf.emplace(id, buf);
+  }
+
   void Monitor(perf_type_id type, std::uint64_t eventid, int pid = 0,
                int cpu = -1, std::uint64_t *buf = nullptr) {
     struct perf_event_attr attr;
@@ -41,24 +57,14 @@ public:
     attr.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID |
                        PERF_FORMAT_TOTAL_TIME_ENABLED |
                        PERF_FORMAT_TOTAL_TIME_RUNNING;
-
-    int fd = syscall(SYS_perf_event_open, &attr, pid, cpu, perf_fd, 0);
-    if (fd == -1) {
-      throw std::system_error(errno, std::generic_category());
-    }
-    std::uint64_t id;
-    if (-1 == ioctl(fd, PERF_EVENT_IOC_ID, &id)) {
-      throw std::system_error(errno, std::generic_category());
-    }
-    if (perf_fd == -1) {
-      perf_fd = fd;
-    }
-    id2buf.emplace(id, buf);
+    Monitor(&attr, pid, cpu, buf);
   }
+
   void Monitor(perf_hw_id eventid, int pid = 0, int cpu = -1,
                std::uint64_t *buf = nullptr) {
     Monitor(PERF_TYPE_HARDWARE, eventid, pid, cpu, buf);
   }
+
   void Monitor(perf_sw_ids eventid, int pid = 0, int cpu = -1,
                std::uint64_t *buf = nullptr) {
     Monitor(PERF_TYPE_SOFTWARE, eventid, pid, cpu, buf);

@@ -20,24 +20,6 @@ DEFINE_string(events, "", "comma-separated list of events to trace");
 
 bool running{true};
 
-void do_perf0(int pid) {
-  PerfMonitor monitor;
-
-  std::uint64_t inst;
-  monitor.Monitor(PERF_COUNT_HW_INSTRUCTIONS, pid, -1, &inst);
-
-  std::uint64_t nanosleep;
-  monitor.Monitor(PERF_TYPE_TRACEPOINT, 379, pid, -1, &nanosleep); // nanosleep
-
-  monitor.Begin();
-  Rate rate(FLAGS_rate);
-  while (running && rate.Ok()) {
-    monitor.Update();
-    std::cout << inst << '\t' << nanosleep << '\n';
-  }
-  monitor.End();
-}
-
 std::uint64_t TryConvertHwId(const std::string &e) {
   static std::unordered_map<std::string, std::uint64_t> e2id{
       {"PERF_COUNT_HW_CPU_CYCLES", PERF_COUNT_HW_CPU_CYCLES},

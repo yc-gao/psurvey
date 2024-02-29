@@ -28,10 +28,9 @@ inline R StrSplit(const std::string &str, char c, Op &&op) {
   return tokens;
 }
 
-
 inline std::uint64_t Event2Id(const std::string &tracefs, std::string e) {
   std::replace(e.begin(), e.end(), ':', '/');
-  std::string path = tracefs + '/' + e;
+  std::string path = tracefs + "/events/" + e + "/id";
   std::ifstream ifs(path);
   std::uint64_t id;
   ifs >> id;
