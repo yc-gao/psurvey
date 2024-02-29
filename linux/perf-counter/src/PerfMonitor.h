@@ -86,11 +86,11 @@ public:
     if (reset) {
       Reset();
     }
+    perf_buf.resize(sizeof(read_format) +
+                    sizeof(read_format::record) * id2buf.size());
     if (-1 == ioctl(group_fd, PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP)) {
       throw std::runtime_error("can not enable perf event");
     }
-    perf_buf.resize(sizeof(read_format) +
-                    sizeof(read_format::record) * id2buf.size());
   }
   void End() {
     if (-1 == ioctl(group_fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP)) {

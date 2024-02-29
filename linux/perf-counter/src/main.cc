@@ -2,7 +2,6 @@
 #include <csignal>
 #include <cstdint>
 #include <iostream>
-#include <unordered_map>
 #include <vector>
 
 #include "gflags/gflags.h"
@@ -33,21 +32,20 @@ int main(int argc, char *argv[]) {
   std::vector<PerfMonitor> monitors(pids.size());
 
   {
-    std::uint64_t idx = 0;
-    for (const auto &e : events) {
+    for (auto i = 0ul; i < events.size(); i++) {
       perf_type_id tid;
       std::uint64_t eid = -1;
-      if ((eid = TryConvertHwId(e)) != -1ul) {
+      if ((eid = TryConvertHwId(events[i])) != -1ul) {
         tid = PERF_TYPE_HARDWARE;
-      } else if ((eid = TryConvertSwId(e)) != -1ul) {
+      } else if ((eid = TryConvertSwId(events[i])) != -1ul) {
         tid = PERF_TYPE_SOFTWARE;
       } else {
         tid = PERF_TYPE_TRACEPOINT;
-        eid = Event2Id(FLAGS_tracefs, e);
+        eid = Event2Id(FLAGS_tracefs, events[i]);
       }
-      for (std::size_t i = 0; i < pids.size(); i++) {
-        monitors[i].Monitor(tid, eid, pids[i], FLAGS_cpu, &counter[idx]);
-        idx++;
+      for (auto j = 0ul; j < pids.size(); j++) {
+        monitors[j].Monitor(tid, eid, pids[j], FLAGS_cpu,
+                            &counter[j * events.size() + i]);
       }
     }
   }
@@ -61,7 +59,6 @@ int main(int argc, char *argv[]) {
       item.Update();
     }
     {
-      // dump result
       auto tm = std::chrono::steady_clock::now().time_since_epoch();
       for (std::size_t i = 0; i < pids.size(); i++) {
         std::cout << tm.count() << '\t' << pids[i];
