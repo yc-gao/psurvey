@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   std::vector<std::string> events = StrSplit(FLAGS_events, ',');
 
   std::vector<std::uint64_t> counter(pids.size() * events.size());
-  PerfMonitor monitor;
+  std::vector<PerfMonitor> monitors(pids.size());
 
   {
     std::uint64_t idx = 0;
@@ -88,17 +88,21 @@ int main(int argc, char *argv[]) {
         tid = PERF_TYPE_TRACEPOINT;
         eid = Event2Id(FLAGS_tracefs, e);
       }
-      for (auto pid : pids) {
-        monitor.Monitor(tid, eid, pid, FLAGS_cpu, &counter[idx]);
+      for (int i = 0; i < pids.size(); i++) {
+        monitors[i].Monitor(tid, eid, pids[i], FLAGS_cpu, &counter[idx]);
         idx++;
       }
     }
   }
 
-  monitor.Begin();
+  for (auto &&item : monitors) {
+    item.Begin();
+  }
   Rate rate(FLAGS_rate);
   while (running && rate.Ok()) {
-    monitor.Update();
+    for (auto &&item : monitors) {
+      item.Update();
+    }
     {
       // dump result
       auto tm = std::chrono::steady_clock::now().time_since_epoch();
@@ -111,7 +115,9 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-  monitor.End();
+  for (auto &&item : monitors) {
+    item.End();
+  }
 
   return 0;
 }
