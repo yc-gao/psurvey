@@ -100,8 +100,7 @@ struct ShmRingbuf {
       return nullptr;
     }
   }
-  void commit(std::uint64_t size) {
-    Segment *segment = prepare(size);
+  void commit(Segment *segment, std::uint64_t size) {
     segment->size = size;
 
     Segment *head = reinterpret_cast<Segment *>(data + this->head);
@@ -112,6 +111,14 @@ struct ShmRingbuf {
         reinterpret_cast<char *>(&*segment) - data;
     reinterpret_cast<Segment *>(data + segment->next)->prev =
         reinterpret_cast<char *>(&*segment) - data;
+  }
+  bool commit(std::uint64_t size) {
+    Segment *segment = prepare(size);
+    if (!segment) {
+      return false;
+    }
+    commit(segment, size);
+    return true;
   }
 
   void erase(SegmentIterator iter) {

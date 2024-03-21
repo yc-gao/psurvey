@@ -11,7 +11,7 @@ template <typename T> bool ringbuf_append(ShmRingbuf *ringbuf, const T &val) {
     return false;
   }
   seg->Value<std::decay_t<T>>() = val;
-  ringbuf->commit(sizeof(val));
+  ringbuf->commit(seg, sizeof(val));
   return true;
 }
 
