@@ -63,6 +63,9 @@ struct ShmRingbuf {
   };
 
   ShmRingbuf(std::uint64_t size) : head(0), capacity(size) {
+    if (capacity < sizeof(Segment)) {
+      throw std::bad_alloc();
+    }
     auto head = end();
     head->prev = 0;
     head->next = 0;
@@ -74,27 +77,25 @@ struct ShmRingbuf {
 
   Segment *prepare(std::uint64_t size) {
     Segment *cur = reinterpret_cast<Segment *>(data + head);
-    Segment *prev = reinterpret_cast<Segment *>(data + cur->prev);
-    std::uint64_t prev_pos = reinterpret_cast<char *>(&*prev) - data;
-    std::uint64_t prev_size = prev->size + sizeof(Segment);
+    Segment *front = reinterpret_cast<Segment *>(data + cur->prev);
+    std::uint64_t front_pos = reinterpret_cast<char *>(&*front) - data;
+    std::uint64_t front_size = front->size + sizeof(Segment);
 
-    Segment *next = reinterpret_cast<Segment *>(data + cur->next);
-    std::uint64_t next_pos = reinterpret_cast<char *>(&*prev) - data;
-    std::uint64_t next_size = next->size + sizeof(Segment);
+    Segment *back = reinterpret_cast<Segment *>(data + cur->next);
+    std::uint64_t back_pos = reinterpret_cast<char *>(&*back) - data;
+    std::uint64_t back_size = back->size + sizeof(Segment);
 
-    auto capacity = this->capacity - sizeof(Segment);
-
-    if (next_pos < prev_pos) {
-      if (next_pos - prev_pos - prev_size >= size + sizeof(Segment)) {
-        return reinterpret_cast<Segment *>(data + next_pos + next_size);
+    if (front_pos < back_pos) {
+      if (back_pos - front_pos - front_size >= size + sizeof(Segment)) {
+        return reinterpret_cast<Segment *>(data + front_pos + front_size);
       }
       return nullptr;
     } else {
-      if (capacity - next_pos - next_size >= size + sizeof(Segment)) {
-        return reinterpret_cast<Segment *>(data + next_pos + next_size);
+      if (capacity - front_pos - front_size >= size + sizeof(Segment)) {
+        return reinterpret_cast<Segment *>(data + front_pos + front_size);
       }
-      if (prev_pos >= size + sizeof(Segment)) {
-        return reinterpret_cast<Segment *>(data);
+      if (back_pos - sizeof(Segment) >= size + sizeof(Segment)) {
+        return reinterpret_cast<Segment *>(data + sizeof(Segment));
       }
       return nullptr;
     }
