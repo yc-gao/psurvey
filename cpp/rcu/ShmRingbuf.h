@@ -1,11 +1,16 @@
 #pragma once
 
-#include <atomic>
 #include <cstdint>
 #include <iterator>
 
 struct ShmRingbuf {
   struct Segment {
+    template <typename T = char> T *Addr() {
+      return reinterpret_cast<T *>(data);
+    }
+    template <typename T = char> const T *Addr() const {
+      return reinterpret_cast<const T *>(data);
+    }
     template <typename T> T &Value() { return *reinterpret_cast<T *>(data); }
     template <typename T> const T &Value() const {
       return *reinterpret_cast<const T *>(data);
@@ -19,7 +24,7 @@ struct ShmRingbuf {
 
   struct SegmentIterator {
     using iterator_category = std::bidirectional_iterator_tag;
-    using difference_type = int;
+    using difference_type = ptrdiff_t;
     using value_type = Segment;
     using pointer = value_type *;
     using reference = value_type &;
@@ -57,82 +62,64 @@ struct ShmRingbuf {
     std::uint64_t pos;
   };
 
-  ShmRingbuf(std::uint64_t size)
-      : tail(0), head(sizeof(Segment)), capacity(size) {
-    auto tail = begin();
-    tail->next = this->head;
-    tail->size = 0;
-
+  ShmRingbuf(std::uint64_t size) : head(0), capacity(size) {
     auto head = end();
-    head->prev = this->tail;
+    head->prev = 0;
+    head->next = 0;
     head->size = 0;
   }
 
-  void rcu_lock() { rcu_count.fetch_add(1); }
-  void rcu_unlock() { rcu_count.fetch_sub(1); }
-  void rcu_sync() {
-    while (rcu_count) {
-      // WARNING: maybe sleep
-    }
-  }
-
-  SegmentIterator begin() { return SegmentIterator{data, tail}; }
+  SegmentIterator begin() { return std::next(SegmentIterator{data, head}); }
   SegmentIterator end() { return SegmentIterator{data, head}; }
 
-  template <typename F> void remove_if(F &&op) {
-    auto st = begin(), ed = end();
-    for (; st != ed; ++st) {
-      if (!op(*st)) {
-        break;
-      }
-    }
-    // WARNING: keep 2 elems
-    if (st == ed) {
-      --st;
-    }
-    tail = reinterpret_cast<char *>(&*st) - data;
-  }
-
-  template <typename F> void rcu_remove_if(F &&f) {
-    remove_if(std::forward<F>(f));
-    rcu_sync();
-  }
-
   Segment *prepare(std::uint64_t size) {
-    if (head < tail) {
-      if (tail - head >= size + sizeof(Segment) * 2) {
-        return reinterpret_cast<Segment *>(data + head);
+    Segment *cur = reinterpret_cast<Segment *>(data + head);
+    Segment *prev = reinterpret_cast<Segment *>(data + cur->prev);
+    std::uint64_t prev_pos = reinterpret_cast<char *>(&*prev) - data;
+    std::uint64_t prev_size = prev->size + sizeof(Segment);
+
+    Segment *next = reinterpret_cast<Segment *>(data + cur->next);
+    std::uint64_t next_pos = reinterpret_cast<char *>(&*prev) - data;
+    std::uint64_t next_size = next->size + sizeof(Segment);
+
+    auto capacity = this->capacity - sizeof(Segment);
+
+    if (next_pos < prev_pos) {
+      if (next_pos - prev_pos - prev_size >= size + sizeof(Segment)) {
+        return reinterpret_cast<Segment *>(data + next_pos + next_size);
       }
       return nullptr;
     } else {
-      if (capacity - head >= size + sizeof(Segment) * 2) {
-        return reinterpret_cast<Segment *>(data + head);
+      if (capacity - next_pos - next_size >= size + sizeof(Segment)) {
+        return reinterpret_cast<Segment *>(data + next_pos + next_size);
       }
-      if (tail >= size + sizeof(Segment) * 2) {
+      if (prev_pos >= size + sizeof(Segment)) {
         return reinterpret_cast<Segment *>(data);
       }
       return nullptr;
     }
   }
   void commit(std::uint64_t size) {
-    Segment *cur_seg = prepare(size);
-    cur_seg->size = size;
+    Segment *segment = prepare(size);
+    segment->size = size;
 
-    Segment *head_seg = reinterpret_cast<Segment *>(data + head);
-    Segment *next_seg = (Segment *)((char *)cur_seg + sizeof(Segment) + size);
-    next_seg->size = 0;
+    Segment *head = reinterpret_cast<Segment *>(data + this->head);
+    segment->prev = head->prev;
+    segment->next = reinterpret_cast<char *>(&*head) - data;
 
-    next_seg->prev = (char *)cur_seg - data;
-    cur_seg->next = (char *)next_seg - data;
-    if (cur_seg != head_seg) {
-      head_seg->next = (char *)cur_seg - data;
-      cur_seg->prev = (char *)head_seg - data;
-    }
-    head = cur_seg->next;
+    reinterpret_cast<Segment *>(data + segment->prev)->next =
+        reinterpret_cast<char *>(&*segment) - data;
+    reinterpret_cast<Segment *>(data + segment->next)->prev =
+        reinterpret_cast<char *>(&*segment) - data;
   }
 
-  std::atomic_int rcu_count{0};
-  std::uint64_t tail;
+  void erase(SegmentIterator iter) {
+    auto prev = std::prev(iter);
+    auto next = std::next(iter);
+    prev->next = reinterpret_cast<char *>(&*next) - data;
+    next->prev = reinterpret_cast<char *>(&*prev) - data;
+  }
+
   std::uint64_t head;
   std::uint64_t capacity;
   char data[];
