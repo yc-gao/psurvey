@@ -75,6 +75,9 @@ struct ShmRingbuf {
   SegmentIterator begin() { return std::next(SegmentIterator{data, head}); }
   SegmentIterator end() { return SegmentIterator{data, head}; }
 
+  auto rbegin() { return std::make_reverse_iterator(end()); }
+  auto rend() { return std::make_reverse_iterator(begin()); }
+
   Segment *prepare(std::uint64_t size) {
     Segment *cur = reinterpret_cast<Segment *>(data + head);
     Segment *front = reinterpret_cast<Segment *>(data + cur->prev);
