@@ -66,11 +66,11 @@ macro(bpf_generate_object objs)
     foreach(src obj IN ZIP_LISTS srcs tmp_objs)
         add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${obj}
             COMMAND ${clang_EXECUTABLE} -target bpf
-                -o ${obj} -c -g -O2
+                -o ${CMAKE_CURRENT_BINARY_DIR}/${obj} -c -g -O2
                 -D__TARGET_ARCH_${ARCH}
                 -I${libbpf_INCLUDE_DIRS} -I/usr/include/${CMAKE_SYSTEM_PROCESSOR}-linux-gnu
-                ${CMAKE_CURRENT_SOURCE_DIR}/${src}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                ${src}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             DEPENDS bpf::bpf ${CMAKE_CURRENT_SOURCE_DIR}/${src})
         list(APPEND ${objs} ${CMAKE_CURRENT_BINARY_DIR}/${obj})
     endforeach()
@@ -84,9 +84,9 @@ endmacro()
 macro(bpf_generate_skel skel)
     set(objs "${ARGN}")
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${skel}.skel.h
-        COMMAND bpf::bpftool gen object ${skel}.o ${objs}
-        COMMAND bpf::bpftool gen skeleton ${skel}.o > ${skel}.skel.h
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND bpf::bpftool gen object ${CMAKE_CURRENT_BINARY_DIR}/${skel}.o ${objs}
+        COMMAND bpf::bpftool gen skeleton ${CMAKE_CURRENT_BINARY_DIR}/${skel}.o > ${CMAKE_CURRENT_BINARY_DIR}/${skel}.skel.h
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS bpf::bpftool ${objs}
         VERBATIM)
 endmacro()
