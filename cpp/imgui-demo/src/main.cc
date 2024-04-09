@@ -9,6 +9,14 @@ static void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
+void DrawUI() {
+  const ImGuiViewport *main_viewport = ImGui::GetMainViewport();
+  ImGui::SetNextWindowPos(main_viewport->Pos);
+  ImGui::SetNextWindowSize(main_viewport->Size);
+  ImGui::Begin("##", nullptr, ImGuiWindowFlags_NoDecoration);
+  ImGui::End();
+}
+
 int main(int argc, char *argv[]) {
   (void)argc;
   (void)argv;
@@ -33,6 +41,7 @@ int main(int argc, char *argv[]) {
   ImGuiIO &io = ImGui::GetIO();
   io.ConfigFlags |=
       ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_DockingEnable;
+  io.IniFilename = nullptr;
   ImGui::StyleColorsDark();
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version);
@@ -44,7 +53,7 @@ int main(int argc, char *argv[]) {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // TODO: draw items
+    DrawUI();
 
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
