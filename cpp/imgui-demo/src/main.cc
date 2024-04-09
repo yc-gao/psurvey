@@ -46,11 +46,11 @@ int main(int argc, char *argv[]) {
 
     // TODO: draw items
 
-    ImGui::Render();
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
     glClear(GL_COLOR_BUFFER_BIT);
+    ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     glfwSwapBuffers(window);
   }
