@@ -17,5 +17,5 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include;${CMAKE_CURRENT_SOURCE_
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(gobject REQUIRED IMPORTED_TARGET gobject-2.0)
 
-add_executable(demo demo.cc TNumber.cc TInt.cc)
+add_executable(demo demo.cc TInt.cc)
 target_link_libraries(demo PkgConfig::gobject)
