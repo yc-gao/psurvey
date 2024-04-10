@@ -1,6 +1,16 @@
 #include "TInt.h"
 
-G_DEFINE_TYPE(TInt, t_int, G_TYPE_OBJECT)
+#include "TAddable.h"
+
+static void t_int_t_addable_init(TAddableInterface *iface) {
+  iface->inc = [](TAddable *self) {
+    TInt *inst = T_INT(self);
+    inst->value++;
+  };
+}
+G_DEFINE_TYPE_WITH_CODE(TInt, t_int, G_TYPE_OBJECT,
+                        G_IMPLEMENT_INTERFACE(T_TYPE_ADDABLE,
+                                              t_int_t_addable_init))
 
 static void t_int_set_property(GObject *object, guint property_id,
                                const GValue *value, GParamSpec *pspec) {
