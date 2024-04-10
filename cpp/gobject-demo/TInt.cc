@@ -1,5 +1,7 @@
 #include "TInt.h"
 
+G_DEFINE_TYPE(TInt, t_int, G_TYPE_OBJECT)
+
 static void t_int_set_property(GObject *object, guint property_id,
                                const GValue *value, GParamSpec *pspec) {
 
@@ -39,5 +41,3 @@ static void t_int_class_init(TIntClass *klass) {
                                                    G_PARAM_READWRITE));
 }
 static void t_int_init(_TInt *) {}
-
-G_DEFINE_TYPE(TInt, t_int, G_TYPE_OBJECT)
