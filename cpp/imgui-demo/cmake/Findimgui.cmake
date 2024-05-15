@@ -1,14 +1,17 @@
-include(FetchContent)
+find_package(glfw REQUIRED)
 
-set(GLFW_BUILD_WAYLAND OFF)
-FetchContent_Declare(glfw URL https://github.com/glfw/glfw/archive/refs/tags/3.4.tar.gz)
-FetchContent_MakeAvailable(glfw)
+include(FetchContent)
 
 FetchContent_Declare(imgui
     GIT_REPOSITORY      https://github.com/ocornut/imgui.git
     GIT_TAG             docking
 )
 FetchContent_Populate(imgui)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(imgui DEFAULT_MSG
+    glfw_FOUND imgui_POPULATED
+)
 
 add_library(imgui
     ${imgui_SOURCE_DIR}/imgui.cpp
@@ -20,5 +23,6 @@ add_library(imgui
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
 )
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
-target_link_libraries(imgui PUBLIC glfw dl GL)
+target_link_libraries(imgui PUBLIC glfw dl)
+
 
