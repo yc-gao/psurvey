@@ -5,7 +5,6 @@ int fib(int a) {
   return fib(a - 1) + fib(a - 2);
 }
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
 TEST_CASE("fib") {

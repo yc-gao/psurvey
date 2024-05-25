@@ -20,7 +20,10 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(doctest)
 
-add_executable(fib fib.cc)
+add_executable(fib main.cc fib.cc)
+target_compile_definitions(fib PRIVATE DOCTEST_CONFIG_DISABLE)
 target_link_libraries(fib PRIVATE doctest::doctest)
 
+add_executable(fib_test test_main.cc fib.cc)
+target_link_libraries(fib_test PRIVATE doctest::doctest)
 
