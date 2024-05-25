@@ -1,0 +1,25 @@
+cmake_minimum_required(VERSION 3.17)
+project(nanobench-demo VERSION 0.0.1)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+include(GNUInstallDirs)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS "-pipe -Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
+include(FetchContent)
+FetchContent_Declare(
+  nanobench
+  GIT_REPOSITORY https://github.com/martinus/nanobench.git
+  GIT_TAG        master
+  GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(nanobench)
+
+add_executable(demo demo.cc)
+target_link_libraries(demo PRIVATE nanobench)
+
