@@ -13,7 +13,7 @@ def scaled_dot_product_attention(q, k, v):
 
 
 def main():
-    q = torch.rand(1, 256, 4096)
+    q = torch.rand(256, 4096)
     k = torch.rand(128, 4096)
     v = torch.rand(128, 2048)
     pred = scaled_dot_product_attention(q, k, v)
