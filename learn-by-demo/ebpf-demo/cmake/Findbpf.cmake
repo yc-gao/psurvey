@@ -77,7 +77,7 @@ macro(bpf_object name)
     foreach(item IN ZIP_LISTS ${name}_objs ${name}_srcs)
         add_custom_command(OUTPUT ${item_0}
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            COMMAND ${CLANG_EXE} --target=bpf -c -g -O2 -D__TARGET_ARCH_${ARCH} ${CLANG_SYSTEM_INCLUDES} -I ${libbpf_INCLUDE_DIRS} -o ${item_0} ${CMAKE_CURRENT_SOURCE_DIR}/${item_1}
+            COMMAND ${CLANG_EXE} --target=bpf -c -g -O2 -D__TARGET_ARCH_${ARCH} ${CLANG_SYSTEM_INCLUDES} -I ${libbpf_INCLUDE_DIRS} -I ${PROJECT_SOURCE_DIR}/vmlinux/${ARCH} -o ${item_0} ${CMAKE_CURRENT_SOURCE_DIR}/${item_1}
             DEPENDS bpf::libbpf
         )
     endforeach()
