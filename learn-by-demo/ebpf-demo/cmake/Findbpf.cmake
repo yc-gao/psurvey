@@ -42,7 +42,8 @@ add_dependencies(bpf::bpftool bpftool-proj)
 find_program(CLANG_EXE NAMES clang REQUIRED)
 
 
-execute_process(COMMAND uname -m
+execute_process(
+    COMMAND uname -m
     COMMAND sed -e "s/x86_64/x86/" -e "s/aarch64/arm64/" -e "s/ppc64le/powerpc/" -e "s/mips.*/mips/" -e "s/riscv64/riscv/"
     OUTPUT_VARIABLE ARCH_output
     ERROR_VARIABLE ARCH_error
@@ -72,25 +73,31 @@ else()
 endif()
 
 macro(bpf_object name)
+    set(${name}_skel ${CMAKE_CURRENT_BINARY_DIR}/${name}.skel.h)
     set(${name}_srcs "${ARGN}")
     list(TRANSFORM ${name}_srcs REPLACE .bpf.c .bpf.o OUTPUT_VARIABLE ${name}_objs)
+    list(TRANSFORM ${name}_objs PREPEND ${CMAKE_CURRENT_BINARY_DIR}/ OUTPUT_VARIABLE ${name}_objs)
+    list(TRANSFORM ${name}_srcs PREPEND ${CMAKE_CURRENT_SOURCE_DIR}/ OUTPUT_VARIABLE ${name}_srcs)
+
     foreach(item IN ZIP_LISTS ${name}_objs ${name}_srcs)
-        add_custom_command(OUTPUT ${item_0}
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            COMMAND ${CLANG_EXE} --target=bpf -c -g -O2 -D__TARGET_ARCH_${ARCH} ${CLANG_SYSTEM_INCLUDES} -I ${libbpf_INCLUDE_DIRS} -I ${PROJECT_SOURCE_DIR}/vmlinux/${ARCH} -o ${item_0} ${CMAKE_CURRENT_SOURCE_DIR}/${item_1}
-            DEPENDS bpf::libbpf
+        add_custom_command(
+            OUTPUT ${item_0}
+            COMMAND ${CLANG_EXE} --target=bpf -c -g -O2 -D__TARGET_ARCH_${ARCH}
+                    ${CLANG_SYSTEM_INCLUDES} -I ${libbpf_INCLUDE_DIRS} -I ${PROJECT_SOURCE_DIR}/vmlinux/${ARCH}
+                    -o ${item_0} ${item_1}
+            DEPENDS bpf::libbpf ${item_1}
         )
     endforeach()
-    add_custom_target(
-            OUTPUT ${name}.skel.h
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-            COMMAND bpf::bpftool gen object ${name}.tmp.o ${${name}_objs}
-            COMMAND bpf::bpftool gen skeleton ${name}.tmp.o name ${name} > ${name}.skel.h
+    add_custom_command(
+            OUTPUT ${${name}_skel}
+            COMMAND bpf::bpftool gen object ${CMAKE_CURRENT_BINARY_DIR}/${name}.tmp.o ${${name}_objs}
+            COMMAND bpf::bpftool gen skeleton ${CMAKE_CURRENT_BINARY_DIR}/${name}.tmp.o name ${name} > ${${name}_skel}
             VERBATIM
-            DEPENDS ${${name}_objs}
+            DEPENDS bpf::bpftool ${${name}_objs}
     )
     add_library(${name} INTERFACE)
-    target_sources(${name} INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/${name}.skel.h)
+    target_sources(${name} INTERFACE ${${name}_skel})
     target_include_directories(${name} INTERFACE ${CMAKE_CURRENT_BINARY_DIR})
+    target_link_libraries(${name} INTERFACE bpf::libbpf elf z)
 endmacro()
 
