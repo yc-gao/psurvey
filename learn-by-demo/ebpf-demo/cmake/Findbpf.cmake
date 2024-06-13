@@ -7,6 +7,7 @@ ExternalProject_Add(libbpf-proj
     BUILD_IN_SOURCE     True
     BUILD_COMMAND       BUILD_STATIC_ONLY=y make -C src
     INSTALL_COMMAND     DESTDIR=<INSTALL_DIR> make -C src install
+    COMMAND             cp -r include/uapi/linux <INSTALL_DIR>/usr/include/
 )
 ExternalProject_Get_Property(libbpf-proj INSTALL_DIR)
 

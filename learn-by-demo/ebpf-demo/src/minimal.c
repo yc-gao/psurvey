@@ -21,7 +21,8 @@ int main(int argc, char **argv) {
 
   if (minimal_bpf__attach(skel)) {
     fprintf(stderr, "Failed to attach BPF skeleton\n");
-    goto cleanup;
+    minimal_bpf__destroy(skel);
+    return 1;
   }
 
   printf(
@@ -34,7 +35,6 @@ int main(int argc, char **argv) {
     sleep(1);
   }
 
-cleanup:
   minimal_bpf__destroy(skel);
   return 0;
 }
