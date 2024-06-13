@@ -15,4 +15,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 set(CMAKE_CUDA_ARCHITECTURES 80 90)
 
-add_executable(demo demo.cu)
+add_subdirectory(3rdparty)
+add_subdirectory(src)
+
