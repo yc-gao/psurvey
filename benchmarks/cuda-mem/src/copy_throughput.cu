@@ -1,7 +1,6 @@
 #include <thrust/device_vector.h>
 
 #include <nvbench/nvbench.cuh>
-#include <nvbench/test_kernels.cuh>
 
 template <typename T>
 __global__ void copy_kernel(const T *in, T *out, std::size_t n) {
