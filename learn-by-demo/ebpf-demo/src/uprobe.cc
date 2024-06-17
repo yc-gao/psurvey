@@ -55,7 +55,7 @@ void show_stack_trace(const __u64 *stack, int stack_sz, pid_t pid) {
         symbolizer, &src, (const uintptr_t *)stack, stack_sz);
   }
 
-  for (int i = 0; i < stack_sz; i++) {
+  for (auto i = 0; i < stack_sz; i++) {
     if (!result || result->cnt <= i || result->syms[i].name == NULL) {
       printf("%016llx: <no-symbol>\n", stack[i]);
       continue;
@@ -85,16 +85,30 @@ static int handle_event([[maybe_unused]] void *ctx, void *data,
   return 0;
 }
 
+bool parse_uprobe_entry(struct uprobe_bpf *skel, const char *entry) {
+  char buf[1024];
+  strncpy(buf, entry, sizeof(buf) - 1);
+  auto iter = strchr(buf, ':');
+  if (!iter) {
+    return false;
+  }
+  *iter = '\0';
+  LIBBPF_OPTS(bpf_uprobe_opts, uprobe_opts, .retprobe = false,
+              .func_name = iter + 1);
+  skel->links.uprobe_add = bpf_program__attach_uprobe_opts(skel->progs.uprobe_add, -1, buf, 0, &uprobe_opts);
+  if (!skel->links.uprobe_add) {
+    return false;
+  }
+
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   std::signal(SIGINT, [](int) { running = false; });
   std::signal(SIGTERM, [](int) { running = false; });
 
-  libbpf_set_print([]([[maybe_unused]] enum libbpf_print_level level,
-                      const char *format,
-                      va_list args) { return vfprintf(stderr, format, args); });
   int ret = 0;
   struct uprobe_bpf *skel;
-  LIBBPF_OPTS(bpf_uprobe_opts, uprobe_opts);
   struct ring_buffer *rb = nullptr;
 
   symbolizer = blaze_symbolizer_new();
@@ -104,6 +118,9 @@ int main(int argc, char *argv[]) {
     goto err_new_blaze;
   }
 
+  libbpf_set_print([](enum libbpf_print_level, const char *format,
+                      va_list args) { return vfprintf(stderr, format, args); });
+
   skel = uprobe_bpf__open_and_load();
   if (!skel) {
     fprintf(stderr, "Failed to open and load BPF skeleton\n");
@@ -111,17 +128,14 @@ int main(int argc, char *argv[]) {
     goto err_open_load;
   }
 
-  uprobe_opts.func_name = "sleep";
-  uprobe_opts.retprobe = false;
-  skel->links.uprobe_add= bpf_program__attach_uprobe_opts(
-      skel->progs.uprobe_add, -1 /* self pid */, "/usr/lib/libc.so.6",
-      0 /* offset for function */, &uprobe_opts /* opts */);
-  if (!skel->links.uprobe_add) {
-    fprintf(stderr, "Failed to attach uprobe: %d\n", -errno);
-    ret = 1;
-    goto err_uprobe_add;
+  for (int i = 1; i < argc; i++) {
+    if (!parse_uprobe_entry(skel, argv[i])) {
+      fprintf(stderr, "Failed to attach uprobe: %s, error: %d\n", argv[i],
+              -errno);
+      ret = 1;
+      goto err_uprobe_add;
+    }
   }
-
   if (uprobe_bpf__attach(skel)) {
     fprintf(stderr, "Failed to attach BPF skeleton\n");
     ret = 1;
