@@ -37,7 +37,7 @@ static void print_frame(const char *name, uintptr_t input_addr, uintptr_t addr,
     }
   }
 }
-void show_stack_trace(const __u64 *stack, int stack_sz, pid_t pid) {
+void show_stack_trace(pid_t pid, const __u64 *stack, int stack_sz) {
   const struct blaze_result *result;
 
   if (pid) {
@@ -80,7 +80,7 @@ static int handle_event([[maybe_unused]] void *ctx, void *data,
   printf("%-8d%-8s\n", e->pid, e->comm);
   if (e->ustack_sz > 0) {
     printf("Userspace:\n");
-    show_stack_trace(e->ustack, e->ustack_sz / sizeof(__u64), e->pid);
+    show_stack_trace(e->pid, e->ustack, e->ustack_sz / sizeof(__u64));
   }
   return 0;
 }
