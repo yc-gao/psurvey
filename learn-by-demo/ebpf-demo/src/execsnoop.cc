@@ -1,40 +1,36 @@
 #include <csignal>
 
-#include "bootstrap.h"
-#include "bootstrap_bpf.skel.h"
-
-static int libbpf_print_fn([[maybe_unused]] enum libbpf_print_level level,
-                           const char *format, va_list args) {
-  return vfprintf(stderr, format, args);
-}
+#include "execsnoop.h"
+#include "execsnoop_bpf.skel.h"
 
 static int handle_event([[maybe_unused]] void *ctx, void *data,
                         [[maybe_unused]] size_t data_sz) {
   const struct event *e = reinterpret_cast<const struct event *>(data);
-  printf("%-8d%-8s\n", e->pid, e->comm);
+  printf("%-16s%-7d %s\n", e->comm, e->pid, e->filename);
   return 0;
 }
 
 bool running = true;
 
-int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[]) {
+int main(int, char *[]) {
   std::signal(SIGINT, [](int) { running = false; });
   std::signal(SIGTERM, [](int) { running = false; });
 
-  libbpf_set_print(libbpf_print_fn);
   int ret = 0;
-
-  struct bootstrap_bpf *skel = nullptr;
+  struct execsnoop_bpf *skel = nullptr;
   struct ring_buffer *rb = nullptr;
 
-  skel = bootstrap_bpf__open_and_load();
+  libbpf_set_print([](enum libbpf_print_level, const char *format,
+                      va_list args) { return vfprintf(stderr, format, args); });
+
+  skel = execsnoop_bpf__open_and_load();
   if (!skel) {
     fprintf(stderr, "Failed to open BPF skeleton\n");
     ret = 1;
     goto err_open_load;
   }
 
-  if (bootstrap_bpf__attach(skel)) {
+  if (execsnoop_bpf__attach(skel)) {
     fprintf(stderr, "Failed to attach BPF skeleton\n");
     ret = 1;
     goto err_attach;
@@ -63,7 +59,7 @@ err_poll:
   ring_buffer__free(rb);
 err_ring:
 err_attach:
-  bootstrap_bpf__destroy(skel);
+  execsnoop_bpf__destroy(skel);
 err_open_load:
   return ret;
 }

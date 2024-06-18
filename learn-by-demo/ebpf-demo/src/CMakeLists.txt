@@ -14,9 +14,9 @@ bpf_executable(minimal
     SRCS     minimal.c
 )
 
-bpf_executable(bootstrap
-    BPF_SRCS bootstrap.bpf.c
-    SRCS     bootstrap.cc
+bpf_executable(execsnoop
+    BPF_SRCS execsnoop.bpf.c
+    SRCS     execsnoop.cc
 )
 
 bpf_executable(uprobe
