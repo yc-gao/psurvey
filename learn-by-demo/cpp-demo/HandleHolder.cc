@@ -14,7 +14,7 @@ class HandleHolder {
     swap(a.deallocator_, b.deallocator_);
   }
 
-  ~HandleHolder() {
+  virtual ~HandleHolder() {
     if (deallocator_) {
       deallocator_(handle_);
     }
