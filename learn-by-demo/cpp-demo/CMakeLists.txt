@@ -18,7 +18,8 @@ set(CPM_SOURCE_CACHE "$ENV{HOME}/.cache/CPM")
 include(CPM)
 CPMAddPackage("gh:doctest/doctest#v2.4.11")
 
-add_executable(HandleHolder HandleHolder.cc)
-target_compile_features(HandleHolder PRIVATE cxx_std_17)
-target_link_libraries(HandleHolder PRIVATE doctest::doctest)
+file(GLOB SRCS *.cc)
+add_executable(demo ${SRCS})
+target_compile_features(demo PRIVATE cxx_std_17)
+target_link_libraries(demo PRIVATE doctest::doctest)
 
