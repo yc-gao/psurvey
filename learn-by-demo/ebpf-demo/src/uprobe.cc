@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <string>
 
+#include "gsl/util"
+
 // clang-format off
 #include "bpf/libbpf.h"
 #include "uprobe_bpf.skel.h"
@@ -116,55 +118,50 @@ int main(int argc, char *argv[]) {
   std::signal(SIGINT, [](int) { running = false; });
   std::signal(SIGTERM, [](int) { running = false; });
 
-  int ret = 0;
-  struct uprobe_bpf *skel;
-  struct ring_buffer *rb = nullptr;
-
   symbolizer = blaze_symbolizer_new();
   if (!symbolizer) {
     fprintf(stderr, "Fail to create a symbolizer\n");
-    ret = -1;
-    goto err_new_blaze;
+    return -1;
   }
+  gsl::finally([=]() { blaze_symbolizer_free(symbolizer); });
 
   libbpf_set_print([](enum libbpf_print_level, const char *format,
                       va_list args) { return vfprintf(stderr, format, args); });
 
-  skel = uprobe_bpf__open();
+  struct uprobe_bpf *skel = uprobe_bpf__open();
   if (!skel) {
     fprintf(stderr, "Failed to open BPF skeleton\n");
-    ret = 1;
-    goto err_open;
+    return -1;
   }
+  gsl::finally([=]() { uprobe_bpf__destroy(skel); });
   skel->rodata->filter_pid = filter_pid;
   skel->rodata->filter_ppid = filter_ppid;
   skel->rodata->filter_tgid = filter_tgid;
+
   if (uprobe_bpf__load(skel)) {
     fprintf(stderr, "Failed to load BPF skeleton\n");
-    ret = 1;
-    goto err_load;
+    return -1;
   }
 
   for (int i = 1; i < argc; i++) {
     if (!parse_uprobe_entry(skel, argv[i])) {
       fprintf(stderr, "Failed to attach uprobe: %s, error: %d\n", argv[i],
               -errno);
-      ret = 1;
-      goto err_uprobe_add;
+      return -1;
     }
   }
   if (uprobe_bpf__attach(skel)) {
     fprintf(stderr, "Failed to attach BPF skeleton\n");
-    ret = 1;
-    goto err_attach;
+    return -1;
   }
 
-  rb = ring_buffer__new(bpf_map__fd(skel->maps.rb), handle_event, NULL, NULL);
+  struct ring_buffer *rb =
+      ring_buffer__new(bpf_map__fd(skel->maps.rb), handle_event, NULL, NULL);
   if (!rb) {
     fprintf(stderr, "Failed to create ring buffer\n");
-    ret = 1;
-    goto err_ring;
+    return -1;
   }
+  gsl::finally([=]() { ring_buffer__free(rb); });
 
   while (running) {
     int err = ring_buffer__poll(rb, 100 /* timeout, ms */);
@@ -173,20 +170,9 @@ int main(int argc, char *argv[]) {
     }
     if (err < 0) {
       fprintf(stderr, "Error polling perf buffer: %d\n", err);
-      ret = 1;
-      goto err_poll;
+      return -1;
     }
   }
 
-err_poll:
-  ring_buffer__free(rb);
-err_ring:
-err_attach:
-err_uprobe_add:
-err_load:
-  uprobe_bpf__destroy(skel);
-err_open:
-  blaze_symbolizer_free(symbolizer);
-err_new_blaze:
-  return ret;
+  return 0;
 }
