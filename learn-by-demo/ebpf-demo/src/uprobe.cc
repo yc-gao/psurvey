@@ -1,11 +1,14 @@
 #include <cassert>
 #include <csignal>
 #include <cstdio>
+#include <string>
 
+// clang-format off
 #include "bpf/libbpf.h"
 #include "uprobe_bpf.skel.h"
 #include "uprobe.h"
 #include "blazesym.h"
+// clang-format on
 
 bool running = true;
 static struct blaze_symbolizer *symbolizer;
@@ -95,8 +98,9 @@ bool parse_uprobe_entry(struct uprobe_bpf *skel, const char *entry) {
   *iter = '\0';
   LIBBPF_OPTS(bpf_uprobe_opts, uprobe_opts);
   uprobe_opts.retprobe = false;
-  uprobe_opts.func_name = iter+1;
-  skel->links.uprobe_add = bpf_program__attach_uprobe_opts(skel->progs.uprobe_add, -1, buf, 0, &uprobe_opts);
+  uprobe_opts.func_name = iter + 1;
+  skel->links.uprobe_add = bpf_program__attach_uprobe_opts(
+      skel->progs.uprobe_add, -1, buf, 0, &uprobe_opts);
   if (!skel->links.uprobe_add) {
     return false;
   }
@@ -104,7 +108,36 @@ bool parse_uprobe_entry(struct uprobe_bpf *skel, const char *entry) {
   return true;
 }
 
+int filter_pid = -1;
+int filter_ppid = -1;
+int filter_tgid = -1;
+
+bool parse_args(int argc, char *argv[]) {
+  try {
+    for (int i = 1; i < argc;) {
+      if (strcmp(argv[i], "--pid") == 0) {
+        filter_pid = std::stoi(argv[i + 1]);
+        i += 2;
+      } else if (strcmp(argv[i], "--ppid") == 0) {
+        filter_ppid = std::stoi(argv[i + 1]);
+        i += 2;
+      } else if (strcmp(argv[i], "--tgid") == 0) {
+        filter_tgid = std::stoi(argv[i + 1]);
+        i += 2;
+      } else {
+        return false;
+      }
+    }
+  } catch (const std::exception &) {
+    return false;
+  }
+  return true;
+}
 int main(int argc, char *argv[]) {
+  if (!parse_args(argc, argv)) {
+    fprintf(stderr, "Fail to parse args\n");
+    return -1;
+  }
   std::signal(SIGINT, [](int) { running = false; });
   std::signal(SIGTERM, [](int) { running = false; });
 
@@ -128,6 +161,9 @@ int main(int argc, char *argv[]) {
     ret = 1;
     goto err_open_load;
   }
+  skel->rodata->filter_pid = filter_pid;
+  skel->rodata->filter_ppid = filter_ppid;
+  skel->rodata->filter_tgid = filter_tgid;
 
   for (int i = 1; i < argc; i++) {
     if (!parse_uprobe_entry(skel, argv[i])) {

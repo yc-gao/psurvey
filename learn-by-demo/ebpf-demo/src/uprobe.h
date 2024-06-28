@@ -13,7 +13,6 @@
 typedef __u64 stack_trace_t[MAX_STACK_DEPTH];
 
 struct stacktrace_event {
-  __u32 cpu_id;
   int pid;
   char comm[TASK_COMM_LEN];
   __s32 ustack_sz;
