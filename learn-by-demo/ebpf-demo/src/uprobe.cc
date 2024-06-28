@@ -112,32 +112,7 @@ int filter_pid = -1;
 int filter_ppid = -1;
 int filter_tgid = -1;
 
-bool parse_args(int argc, char *argv[]) {
-  try {
-    for (int i = 1; i < argc;) {
-      if (strcmp(argv[i], "--pid") == 0) {
-        filter_pid = std::stoi(argv[i + 1]);
-        i += 2;
-      } else if (strcmp(argv[i], "--ppid") == 0) {
-        filter_ppid = std::stoi(argv[i + 1]);
-        i += 2;
-      } else if (strcmp(argv[i], "--tgid") == 0) {
-        filter_tgid = std::stoi(argv[i + 1]);
-        i += 2;
-      } else {
-        return false;
-      }
-    }
-  } catch (const std::exception &) {
-    return false;
-  }
-  return true;
-}
 int main(int argc, char *argv[]) {
-  if (!parse_args(argc, argv)) {
-    fprintf(stderr, "Fail to parse args\n");
-    return -1;
-  }
   std::signal(SIGINT, [](int) { running = false; });
   std::signal(SIGTERM, [](int) { running = false; });
 
@@ -155,15 +130,20 @@ int main(int argc, char *argv[]) {
   libbpf_set_print([](enum libbpf_print_level, const char *format,
                       va_list args) { return vfprintf(stderr, format, args); });
 
-  skel = uprobe_bpf__open_and_load();
+  skel = uprobe_bpf__open();
   if (!skel) {
-    fprintf(stderr, "Failed to open and load BPF skeleton\n");
+    fprintf(stderr, "Failed to open BPF skeleton\n");
     ret = 1;
-    goto err_open_load;
+    goto err_open;
   }
   skel->rodata->filter_pid = filter_pid;
   skel->rodata->filter_ppid = filter_ppid;
   skel->rodata->filter_tgid = filter_tgid;
+  if (uprobe_bpf__load(skel)) {
+    fprintf(stderr, "Failed to load BPF skeleton\n");
+    ret = 1;
+    goto err_load;
+  }
 
   for (int i = 1; i < argc; i++) {
     if (!parse_uprobe_entry(skel, argv[i])) {
@@ -203,8 +183,9 @@ err_poll:
 err_ring:
 err_attach:
 err_uprobe_add:
+err_load:
   uprobe_bpf__destroy(skel);
-err_open_load:
+err_open:
   blaze_symbolizer_free(symbolizer);
 err_new_blaze:
   return ret;
