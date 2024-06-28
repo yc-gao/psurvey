@@ -93,8 +93,9 @@ bool parse_uprobe_entry(struct uprobe_bpf *skel, const char *entry) {
     return false;
   }
   *iter = '\0';
-  LIBBPF_OPTS(bpf_uprobe_opts, uprobe_opts, .retprobe = false,
-              .func_name = iter + 1);
+  LIBBPF_OPTS(bpf_uprobe_opts, uprobe_opts);
+  uprobe_opts.retprobe = false;
+  uprobe_opts.func_name = iter+1;
   skel->links.uprobe_add = bpf_program__attach_uprobe_opts(skel->progs.uprobe_add, -1, buf, 0, &uprobe_opts);
   if (!skel->links.uprobe_add) {
     return false;

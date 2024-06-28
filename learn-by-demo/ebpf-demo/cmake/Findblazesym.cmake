@@ -9,7 +9,7 @@ execute_process(
 )
 
 find_path(blazesym_INCLUDE_DIR NAMES blazesym.h PATHS ${blazesym_SOURCE_DIR}/capi/include REQUIRED)
-find_library(blazesym_LIBRARY NAMES blazesym_c PATHS ${blazesym_SOURCE_DIR}/target/release REQUIRED)
+find_library(blazesym_LIBRARY NAMES libblazesym_c.a PATHS ${blazesym_SOURCE_DIR}/target/release REQUIRED)
 
 add_library(blazesym::blazesym STATIC IMPORTED)
 set_target_properties(blazesym::blazesym PROPERTIES
