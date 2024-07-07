@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+set -e
+
+__func_defered=()
+defer() {
+    __func_defered+=("$*")
+}
+do_defer() {
+    for ((i=${#__func_defered[@]}-1;i>=0;i--)); do
+        if ! eval "${__func_defered[i]}"; then
+            echo "eval cmd failed, cmd: \"${__func_defered[i]}\"" >&2
+        fi
+    done
+}
+trap do_defer EXIT
+
+die() {
+    local code="$1"
+    shift
+    echo "$@" >&2
+    exit "${code}"
+}
+
+opt_args=()
+
+opt_tracefs="/sys/kernel/tracing"
+opt_flag=
+opt_duration=
+
+str_join() {
+    local IFS="$1"
+    shift
+    echo "$*"
+}
+
+symbolize_uprobe() {
+    local uprobe="$1"
+    local -a toks
+    IFS=' ' read -r -a toks <<< "${uprobe}"
+
+    local -a loc
+    IFS=':' read -r -a loc <<< "${toks[1]}"
+    if [[ ${loc[1]} == 0x* ]]; then
+        echo "${uprobe}"
+        return
+    fi
+    local addr="$(objdump -t "${loc[0]}" | awk -v sym="${loc[1]}" '$4 == ".text" && $6 == sym {printf "0x%s", $5;exit 0}')"
+    if [[ -n "${addr}" ]]; then
+        loc[1]="${addr}"
+        toks[1]="$(str_join ':' "${loc[@]}")"
+        uprobe="$(str_join ' ' "${toks[@]}")"
+        echo "${uprobe}"
+        return
+    fi
+    die 1 "invalid uprobe: ${uprobe}"
+}
+
+# TODO: check
+do_uprobe() {
+    local uprobe="${opt_args[1]}"
+    opt_args=("${opt_args[@]:2}")
+
+    uprobe="$(symbolize_uprobe "${uprobe}")"
+    echo "${uprobe}" >> "${opt_tracefs}/uprobe_events"
+    defer "echo > ${opt_tracefs}/uprobe_events"
+}
+
+do_kprobe() {
+    local kprobe="${opt_args[1]}"
+    opt_args=("${opt_args[@]:2}")
+
+    echo "${kprobe}" >> "${opt_tracefs}/kprobe_events"
+    defer "echo > ${opt_tracefs}/kprobe_events"
+}
+
+do_event() {
+    local event="${opt_args[1]}"
+    local event_fs="${opt_tracefs}/events/${opt_args[1]//://}"
+    opt_args=("${opt_args[@]:2}")
+
+    while ((${#opt_args[@]})); do
+        case "${opt_args[0]}" in
+            -f | --filter)
+                echo "${opt_args[1]}" > "${event_fs}/filter"
+                defer "echo 0 > ${event_fs}/filter"
+                opt_args=("${opt_args[@]:2}")
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    echo "${event}" >> "${opt_tracefs}/set_event"
+    defer "echo > ${opt_tracefs}/set_event"
+    opt_flag="y"
+}
+
+do_tracer() {
+    local tracer="${opt_args[1]}"
+    opt_args=("${opt_args[@]:2}")
+
+    while ((${#opt_args[@]})); do
+        case "${opt_args[0]}" in
+            -p | --pid)
+                echo "${opt_args[1]}" >> "${opt_tracefs}/set_ftrace_pid"
+                defer "echo > ${opt_tracefs}/set_ftrace_pid"
+                opt_args=("${opt_args[@]:2}")
+                ;;
+            -f | --filter)
+                echo "${opt_args[1]}" >> "${opt_tracefs}/set_ftrace_filter"
+                defer "echo > ${opt_tracefs}/set_ftrace_filter"
+                opt_args=("${opt_args[@]:2}")
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    echo "${tracer}" > "${opt_tracefs}/current_tracer"
+    defer "echo nop > ${opt_tracefs}/current_tracer"
+    opt_flag="y"
+}
+
+main() {
+    opt_args=("$@")
+    while ((${#opt_args[@]})); do
+        case "${opt_args[0]}" in
+            --uprobe)
+                do_uprobe
+            ;;
+            --kprobe)
+                do_kprobe
+                ;;
+            --ls-event)
+                cat "${opt_tracefs}/available_events"
+                opt_args=("${opt_args[@]:1}")
+                ;;
+            --inspect-event)
+                cat "${opt_tracefs}/events/${opt_args[1]//://}/format"
+                opt_args=("${opt_args[@]:2}")
+                ;;
+            -e | --event)
+                do_event
+                ;;
+            --ls-tracer)
+                cat "${opt_tracefs}/available_tracers"
+                opt_args=("${opt_args[@]:1}")
+                ;;
+            -t | --tracer)
+                do_tracer
+                ;;
+            --tracefs)
+                opt_tracefs="${opt_args[1]}"
+                opt_args=("${opt_args[@]:2}")
+                ;;
+            -d | --duration)
+                opt_duration="${opt_args[1]}"
+                opt_args=("${opt_args[@]:2}")
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    if [[ -n "${opt_flag}" ]]; then
+        echo 1 > "${opt_tracefs}/tracing_on"
+        defer "echo 0 > ${opt_tracefs}/tracing_on"
+        if [[ -n "${opt_duration}" ]]; then
+            defer "cat ${opt_tracefs}/trace"
+            sleep "${opt_duration}"
+        else
+            cat "${opt_tracefs}/trace_pipe"
+        fi
+    fi
+}
+
+main "$@"
+
