@@ -55,6 +55,16 @@ symbolize_uprobe() {
     die 1 "invalid uprobe: ${uprobe}"
 }
 
+do_reset() {
+    opt_args=("${opt_args[@]:1}")
+
+    echo 0 >"${opt_tracefs}/tracing_on"
+    echo nop >"${opt_tracefs}/current_tracer"
+    echo >"${opt_tracefs}/set_event"
+    echo >"${opt_tracefs}/kprobe_events"
+    echo >"${opt_tracefs}/uprobe_events"
+}
+
 # TODO: check
 do_uprobe() {
     local uprobe="${opt_args[1]}"
@@ -127,6 +137,9 @@ main() {
     opt_args=("$@")
     while ((${#opt_args[@]})); do
         case "${opt_args[0]}" in
+            --reset)
+                do_reset
+            ;;
             --uprobe)
                 do_uprobe
             ;;
