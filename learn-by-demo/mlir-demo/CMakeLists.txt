@@ -15,10 +15,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 find_package(MLIR REQUIRED)
-set(CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR};${CMAKE_MODULE_PATH}")
-include(TableGen)
-include(AddLLVM)
-include(AddMLIR)
 
-add_subdirectory(src)
+add_subdirectory(example)
 
