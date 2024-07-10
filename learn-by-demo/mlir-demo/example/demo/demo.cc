@@ -9,12 +9,13 @@
 #include "mlir/Conversion/TosaToArith/TosaToArith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/InitAllDialects.h"
 #include "mlir/InitAllExtensions.h"
+#include "mlir/InitAllPasses.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/All.h"
@@ -62,19 +63,17 @@ mlir::OwningOpRef<mlir::ModuleOp> LoadMLIR(mlir::MLIRContext &context) {
 }  // namespace
 
 int main(int argc, char *argv[]) {
-  mlir::registerAsmPrinterCLOptions();
-  mlir::registerMLIRContextCLOptions();
   mlir::registerPassManagerCLOptions();
   llvm::cl::ParseCommandLineOptions(argc, argv, "demo compiler");
 
   mlir::DialectRegistry registry;
+  mlir::registerAllDialects(registry);
   mlir::registerAllExtensions(registry);
   mlir::registerAllToLLVMIRTranslations(registry);
-  mlir::arith::registerConvertArithToLLVMInterface(registry);
+  mlir::registerAllGPUToLLVMIRTranslations(registry);
   mlir::MLIRContext context(registry);
 
-  context.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
-  context.getOrLoadDialect<mlir::tosa::TosaDialect>();
+  context.loadAllAvailableDialects();
   auto module = LoadMLIR(context);
   if (!module) {
     return 1;
@@ -84,7 +83,6 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  // TODO: run passes
   mlir::PassManager pm(module.get()->getName());
   if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
     llvm::errs() << "Error can't applyPassManagerCLOptions";
