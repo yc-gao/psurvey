@@ -63,10 +63,10 @@ int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "demo compiler");
 
   mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);  // LoadMLIR
-  mlir::registerAllToLLVMIRTranslations(
-      registry);                          // mlir::translateModuleToLLVMIR
+  mlir::registerAllDialects(registry);    // LoadMLIR
   mlir::registerAllExtensions(registry);  // mlir::createConvertToLLVMPass
+  mlir::registerAllToLLVMIRTranslations(
+      registry);  // mlir::translateModuleToLLVMIR
   mlir::MLIRContext context(registry);
 
   auto module = LoadMLIR(context);
