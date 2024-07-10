@@ -6,8 +6,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
-#include "mlir/Conversion/TosaToArith/TosaToArith.h"
-#include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
@@ -15,7 +13,6 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllExtensions.h"
-#include "mlir/InitAllPasses.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/All.h"
@@ -63,17 +60,15 @@ mlir::OwningOpRef<mlir::ModuleOp> LoadMLIR(mlir::MLIRContext &context) {
 }  // namespace
 
 int main(int argc, char *argv[]) {
-  mlir::registerPassManagerCLOptions();
   llvm::cl::ParseCommandLineOptions(argc, argv, "demo compiler");
 
   mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);
-  mlir::registerAllExtensions(registry);
-  mlir::registerAllToLLVMIRTranslations(registry);
-  mlir::registerAllGPUToLLVMIRTranslations(registry);
+  mlir::registerAllDialects(registry);  // LoadMLIR
+  mlir::registerAllToLLVMIRTranslations(
+      registry);                          // mlir::translateModuleToLLVMIR
+  mlir::registerAllExtensions(registry);  // mlir::createConvertToLLVMPass
   mlir::MLIRContext context(registry);
 
-  context.loadAllAvailableDialects();
   auto module = LoadMLIR(context);
   if (!module) {
     return 1;
@@ -84,12 +79,6 @@ int main(int argc, char *argv[]) {
   }
 
   mlir::PassManager pm(module.get()->getName());
-  if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
-    llvm::errs() << "Error can't applyPassManagerCLOptions";
-    return 1;
-  }
-  pm.addPass(mlir::tosa::createTosaToArith());
-  pm.addPass(mlir::arith::createConstantBufferizePass(64));
   pm.addPass(mlir::createConvertToLLVMPass());
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "Error can't run PassManager";
