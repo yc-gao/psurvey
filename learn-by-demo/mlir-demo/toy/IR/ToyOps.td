@@ -11,7 +11,7 @@ def ToyDialect : Dialect {
 class ToyOp<string mnemonic, list<Trait> traits = []> :
     Op<ToyDialect, mnemonic, traits>;
 
-def ConstantOp : ToyOp<"constant"> {
+def ToyConstantOp : ToyOp<"constant"> {
     let summary = "constant";
     let description = [{
         Constant operation turns a literal into an SSA value. The data is attached
@@ -25,7 +25,7 @@ def ConstantOp : ToyOp<"constant"> {
     let results = (outs F64Tensor);
 }
 
-def PrintOp : ToyOp<"print"> {
+def ToyPrintOp : ToyOp<"print"> {
     let summary = "print operation";
     let description = [{
         The "print" builtin operation prints a given input tensor, and produces
