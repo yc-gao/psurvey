@@ -1,6 +1,3 @@
-set(CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR};${CMAKE_MODULE_PATH}")
-include(AddLLVM)
-
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
