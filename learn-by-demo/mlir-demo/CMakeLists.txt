@@ -18,5 +18,6 @@ find_package(MLIR REQUIRED)
 message(STATUS "Using MLIRConfig.cmake in: ${MLIR_DIR}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
+add_subdirectory(src/toy)
 add_subdirectory(example)
 
