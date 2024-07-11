@@ -1,9 +1,10 @@
+get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_mlir_conversion_library(MLIRToyToLLVM
-    Pass.cpp
-    # DEPENDS
-    #     MLIRToyConversionPassIncGen
+    ToyToLLVM.cpp
+    ToyConstantOpLoweringPass.cpp
+    ToyToLLVMLoweringPass.cpp
     LINK_LIBS PUBLIC
-        MLIRToy
+        ${dialect_libs}
 )
 target_include_directories(MLIRToyToLLVM PUBLIC
     ${LLVM_INCLUDE_DIRS}

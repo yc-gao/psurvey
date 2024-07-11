@@ -11,7 +11,6 @@ void ToyDialect::initialize() {
 #include "ToyOps.cpp.inc"
       >();
 }
-
 }  // namespace toy
 }  // namespace mlir
 
