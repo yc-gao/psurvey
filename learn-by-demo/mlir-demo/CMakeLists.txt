@@ -13,6 +13,8 @@ set(CMAKE_CXX_FLAGS "-pipe -Wall -Wextra -Wno-unused-parameter -Wno-unused-but-s
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
-add_subdirectory(src/toy)
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+
+add_subdirectory(toy)
 add_subdirectory(example)
 
