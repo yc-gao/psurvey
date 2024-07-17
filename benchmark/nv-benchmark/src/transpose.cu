@@ -61,11 +61,10 @@ void kernel_transpose(nvbench::state& state, nvbench::type_list<T>) {
   state.collect_loads_efficiency();
   state.collect_stores_efficiency();
 
-  state.exec(
-      nvbench::exec_tag::sync, [=, &input, &output](nvbench::launch& launch) {
-        kernel_transpose_wrap<T>(thrust::raw_pointer_cast(output.data()),
-                                 thrust::raw_pointer_cast(input.data()), M, N);
-      });
+  state.exec([=, &input, &output](nvbench::launch& launch) {
+    kernel_transpose_wrap<T>(thrust::raw_pointer_cast(output.data()),
+                             thrust::raw_pointer_cast(input.data()), M, N);
+  });
 }
 NVBENCH_BENCH_TYPES(
     kernel_transpose,
