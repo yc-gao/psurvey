@@ -86,12 +86,11 @@ void kernel_copy(nvbench::state &state, nvbench::type_list<T>) {
   state.collect_loads_efficiency();
   state.collect_stores_efficiency();
 
-  state.exec(nvbench::exec_tag::sync,
-             [=, &input, &output](nvbench::launch &launch) {
-               kernel_copy_impl<T><<<(num_values + 255) / 256, 256>>>(
-                   thrust::raw_pointer_cast(output.data()),
-                   thrust::raw_pointer_cast(input.data()), num_values);
-             });
+  state.exec([=, &input, &output](nvbench::launch &launch) {
+    kernel_copy_impl<T><<<(num_values + 255) / 256, 256>>>(
+        thrust::raw_pointer_cast(output.data()),
+        thrust::raw_pointer_cast(input.data()), num_values);
+  });
 }
 NVBENCH_BENCH_TYPES(
     kernel_copy,
