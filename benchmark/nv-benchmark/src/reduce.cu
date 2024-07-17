@@ -103,8 +103,7 @@ void kernel_reduce(nvbench::state &state, nvbench::type_list<T>) {
   state.collect_loads_efficiency();
   state.collect_stores_efficiency();
 
-  state.exec(nvbench::exec_tag::sync, [=, &input, &output,
-                                       &temp](nvbench::launch &launch) mutable {
+  state.exec([=, &input, &output, &temp](nvbench::launch &launch) mutable {
     kernel_reduce_impl<T><<<256, 256>>>(thrust::raw_pointer_cast(input.data()),
                                         input.size(),
                                         thrust::raw_pointer_cast(temp.data()));
