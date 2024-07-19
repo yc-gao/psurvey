@@ -1,3 +1,5 @@
+#include "Demo/Conversion/DemoToLLVM.h"
+#include "Demo/IR/DemoOps.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
@@ -48,6 +50,7 @@ int main(int argc, char *argv[]) {
 
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
+  registry.insert<mlir::demo::DemoDialect>();
   mlir::registerAllExtensions(registry);
   mlir::registerAllToLLVMIRTranslations(registry);
   mlir::MLIRContext context(registry);
@@ -58,17 +61,12 @@ int main(int argc, char *argv[]) {
   }
 
   mlir::PassManager pm(module.get()->getName());
-  mlir::gpu::buildLowerToNVVMPassPipeline(
-      pm, mlir::gpu::GPUToNVVMPipelineOptions());
+  pm.addPass(mlir::demo::CreateDemoToLLVMPass());
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "can't run pass on module";
     return 1;
   }
   module->dump();
-
-  llvm::LLVMContext llvmContext;
-  auto llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
-  llvm::outs() << *llvmModule;
 
   return 0;
 }

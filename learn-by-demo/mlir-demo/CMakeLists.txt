@@ -14,5 +14,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(GNUInstallDirs)
 include(MLIR)
 
+add_subdirectory(src)
 add_subdirectory(example)
 
