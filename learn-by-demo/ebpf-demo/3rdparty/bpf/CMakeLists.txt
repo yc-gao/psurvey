@@ -21,7 +21,6 @@ target_link_libraries(libbpf INTERFACE "${libbpf_LIBRARY}")
 find_program(BPFTOOL_EXE NAMES bpftool PATHS ${bpftool_BINARY_DIR}/usr/local/sbin/ REQUIRED)
 find_program(CLANG_EXE NAMES clang REQUIRED)
 
-
 function(bpf_object name)
     execute_process(
         COMMAND uname -m
@@ -36,7 +35,7 @@ function(bpf_object name)
     else()
         message(FATAL_ERROR "Failed to determine target architecture: ${ARCH_error}")
     endif()
-    
+
     execute_process(
         COMMAND bash -c "${CLANG_EXE} -v -E - < /dev/null 2>&1"
         COMMAND sed -n "/<...> search starts here:/,/End of search list./p;"
@@ -63,7 +62,7 @@ function(bpf_object name)
         add_custom_command(
             OUTPUT ${item_0}
             COMMAND ${CLANG_EXE} --target=bpf -c -g -O2 -D__TARGET_ARCH_${ARCH}
-                    ${CLANG_SYSTEM_INCLUDES} -I ${libbpf_INCLUDE_DIR} -I ${PROJECT_SOURCE_DIR}/vmlinux/${ARCH}
+                    ${CLANG_SYSTEM_INCLUDES} -I ${libbpf_INCLUDE_DIR} -I ${PROJECT_SOURCE_DIR}/include/vmlinux/${ARCH}
                     -o ${item_0} ${item_1}
             DEPENDS libbpf ${item_1}
         )
