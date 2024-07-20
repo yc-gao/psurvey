@@ -12,13 +12,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(GNUInstallDirs)
 
-# curl --create-dirs -o cmake/CPM.cmake -fsSL https://github.com/cpm-cmake/CPM.cmake/releases/latest/download/get_cpm.cmake
-set(CPM_SOURCE_CACHE "$ENV{HOME}/.cache/CPM")
-include(CPM)
-CPMAddPackage("gh:doctest/doctest#v2.4.11")
-
-file(GLOB SRCS *.cc)
-add_executable(demo ${SRCS})
-target_compile_features(demo PRIVATE cxx_std_17)
-target_link_libraries(demo PRIVATE doctest::doctest)
+add_subdirectory(3rdparty)
+add_subdirectory(src)
 
