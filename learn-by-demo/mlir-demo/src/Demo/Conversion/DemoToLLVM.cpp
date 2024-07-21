@@ -133,8 +133,8 @@ struct PrintOpLowering : public mlir::OpRewritePattern<mlir::demo::PrintOp> {
   }
 };
 
-struct DemoToLLVMLoweringPass0
-    : public mlir::PassWrapper<DemoToLLVMLoweringPass0,
+struct DemoToLLVMLoweringPass
+    : public mlir::PassWrapper<DemoToLLVMLoweringPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(
       mlir::DialectRegistry &registry) const override final {
@@ -142,30 +142,8 @@ struct DemoToLLVMLoweringPass0
                     mlir::scf::SCFDialect, mlir::arith::ArithDialect>();
   }
   void runOnOperation() override final {
-    mlir::ConversionTarget target(getContext());
-    target.addLegalDialect<mlir::LLVM::LLVMDialect, mlir::memref::MemRefDialect,
-                           mlir::scf::SCFDialect, mlir::arith::ArithDialect>();
-
-    mlir::RewritePatternSet patterns(&getContext());
-    patterns.add<PrintOpLowering>(&getContext());
-
-    if (failed(mlir::applyPartialConversion(getOperation(), target,
-                                            std::move(patterns))))
-      signalPassFailure();
-  }
-};
-
-struct DemoToLLVMLoweringPass1
-    : public mlir::PassWrapper<DemoToLLVMLoweringPass1,
-                               mlir::OperationPass<mlir::ModuleOp>> {
-  void getDependentDialects(
-      mlir::DialectRegistry &registry) const override final {
-    registry.insert<mlir::LLVM::LLVMDialect>();
-  }
-  void runOnOperation() override final {
     mlir::LLVMConversionTarget target(getContext());
     target.addLegalOp<mlir::ModuleOp>();
-
     mlir::LLVMTypeConverter typeConverter(&getContext());
 
     mlir::RewritePatternSet patterns(&getContext());
@@ -176,6 +154,7 @@ struct DemoToLLVMLoweringPass1
     mlir::populateFinalizeMemRefToLLVMConversionPatterns(typeConverter,
                                                          patterns);
     mlir::populateFuncToLLVMConversionPatterns(typeConverter, patterns);
+    patterns.add<PrintOpLowering>(&getContext());
 
     if (failed(mlir::applyFullConversion(getOperation(), target,
                                          std::move(patterns))))
@@ -189,8 +168,7 @@ namespace mlir {
 namespace demo {
 
 void AddPassesDemoToLLVM(mlir::PassManager &pm) {
-  pm.addPass(std::make_unique<DemoToLLVMLoweringPass0>());
-  pm.addPass(std::make_unique<DemoToLLVMLoweringPass1>());
+  pm.addPass(std::make_unique<DemoToLLVMLoweringPass>());
 }
 
 }  // namespace demo
