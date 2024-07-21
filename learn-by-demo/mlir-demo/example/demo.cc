@@ -6,8 +6,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
-#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
-#include "mlir/Dialect/GPU/Pipelines/Passes.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -51,8 +49,6 @@ int main(int argc, char *argv[]) {
   mlir::DialectRegistry registry;
   mlir::registerAllDialects(registry);
   registry.insert<mlir::demo::DemoDialect>();
-  mlir::registerAllExtensions(registry);
-  mlir::registerAllToLLVMIRTranslations(registry);
   mlir::MLIRContext context(registry);
 
   auto module = LoadMLIR(context);
@@ -61,7 +57,7 @@ int main(int argc, char *argv[]) {
   }
 
   mlir::PassManager pm(module.get()->getName());
-  pm.addPass(mlir::demo::CreateDemoToLLVMPass());
+  mlir::demo::AddPassesDemoToLLVM(pm);
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "can't run pass on module";
     return 1;

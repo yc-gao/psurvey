@@ -6,6 +6,7 @@
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -54,9 +55,10 @@ struct PrintOpLowering : public mlir::OpRewritePattern<mlir::demo::PrintOp> {
       rewriter.setInsertionPointToEnd(loop.getBody());
 
       // Insert a newline after each of the inner dimensions of the shape.
-      if (i != e - 1)
+      if (i != e - 1) {
         rewriter.create<mlir::LLVM::CallOp>(loc, getPrintfType(context),
                                             printfRef, newLineCst);
+      }
       rewriter.create<mlir::scf::YieldOp>(loc);
       rewriter.setInsertionPointToStart(loop.getBody());
     }
@@ -131,8 +133,8 @@ struct PrintOpLowering : public mlir::OpRewritePattern<mlir::demo::PrintOp> {
   }
 };
 
-struct DemoToLLVMLoweringPass
-    : public mlir::PassWrapper<DemoToLLVMLoweringPass,
+struct DemoToLLVMLoweringPass0
+    : public mlir::PassWrapper<DemoToLLVMLoweringPass0,
                                mlir::OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(
       mlir::DialectRegistry &registry) const override final {
@@ -140,20 +142,43 @@ struct DemoToLLVMLoweringPass
                     mlir::scf::SCFDialect, mlir::arith::ArithDialect>();
   }
   void runOnOperation() override final {
+    mlir::ConversionTarget target(getContext());
+    target.addLegalDialect<mlir::LLVM::LLVMDialect, mlir::memref::MemRefDialect,
+                           mlir::scf::SCFDialect, mlir::arith::ArithDialect>();
+
+    mlir::RewritePatternSet patterns(&getContext());
+    patterns.add<PrintOpLowering>(&getContext());
+
+    if (failed(mlir::applyPartialConversion(getOperation(), target,
+                                            std::move(patterns))))
+      signalPassFailure();
+  }
+};
+
+struct DemoToLLVMLoweringPass1
+    : public mlir::PassWrapper<DemoToLLVMLoweringPass1,
+                               mlir::OperationPass<mlir::ModuleOp>> {
+  void getDependentDialects(
+      mlir::DialectRegistry &registry) const override final {
+    registry.insert<mlir::LLVM::LLVMDialect>();
+  }
+  void runOnOperation() override final {
     mlir::LLVMConversionTarget target(getContext());
-    target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+    target.addLegalOp<mlir::ModuleOp>();
 
     mlir::LLVMTypeConverter typeConverter(&getContext());
 
     mlir::RewritePatternSet patterns(&getContext());
     mlir::populateSCFToControlFlowConversionPatterns(patterns);
+    mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
+                                                          patterns);
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
     mlir::populateFinalizeMemRefToLLVMConversionPatterns(typeConverter,
                                                          patterns);
-    patterns.add<PrintOpLowering>(&getContext());
+    mlir::populateFuncToLLVMConversionPatterns(typeConverter, patterns);
 
-    auto module = getOperation();
-    if (failed(applyPartialConversion(module, target, std::move(patterns))))
+    if (failed(mlir::applyFullConversion(getOperation(), target,
+                                         std::move(patterns))))
       signalPassFailure();
   }
 };
@@ -163,8 +188,9 @@ struct DemoToLLVMLoweringPass
 namespace mlir {
 namespace demo {
 
-std::unique_ptr<mlir::Pass> CreateDemoToLLVMPass() {
-  return std::make_unique<DemoToLLVMLoweringPass>();
+void AddPassesDemoToLLVM(mlir::PassManager &pm) {
+  pm.addPass(std::make_unique<DemoToLLVMLoweringPass0>());
+  pm.addPass(std::make_unique<DemoToLLVMLoweringPass1>());
 }
 
 }  // namespace demo

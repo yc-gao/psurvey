@@ -1,13 +1,11 @@
 #pragma once
 
-#include <memory>
-
-#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
 
 namespace mlir {
 namespace demo {
 
-std::unique_ptr<mlir::Pass> CreateDemoToLLVMPass();
+void AddPassesDemoToLLVM(mlir::PassManager&);
 
 }  // namespace demo
 }  // namespace mlir
