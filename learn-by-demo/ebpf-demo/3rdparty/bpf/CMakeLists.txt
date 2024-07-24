@@ -4,13 +4,22 @@ execute_process(
     WORKING_DIRECTORY ${bpftool_SOURCE_DIR}
     COMMAND         bash -c "make -C src \
                         && DESTDIR=${bpftool_BINARY_DIR} make -C src install"
+    RESULT_VARIABLE bpftool_RESULT
 )
+if(bpftool_RESULT)
+        message(FATAL_ERROR "Failed to build bpftool: ${bpftool_RESULT}")
+endif()
+
 execute_process(
     WORKING_DIRECTORY ${bpftool_SOURCE_DIR}/libbpf
     COMMAND         bash -c "make -C src BUILD_STATIC_ONLY=y \
                         && DESTDIR=${bpftool_BINARY_DIR} make -C src install \
                         && cp -rt ${bpftool_BINARY_DIR}/usr/include/ include/uapi/linux"
+    RESULT_VARIABLE libbpf_RESULT
 )
+if(libbpf_RESULT)
+        message(FATAL_ERROR "Failed to build libbpf: ${libbpf_RESULT}")
+endif()
 
 find_path(libbpf_INCLUDE_DIR NAMES bpf/bpf.h PATHS ${bpftool_BINARY_DIR}/usr/include REQUIRED)
 find_library(libbpf_LIBRARY NAMES libbpf.a PATHS ${bpftool_BINARY_DIR}/usr/lib64 REQUIRED)
