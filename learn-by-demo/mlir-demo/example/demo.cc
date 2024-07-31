@@ -1,5 +1,6 @@
+#include "Demo/Demo.h"
+
 #include "Demo/Conversion/DemoToLLVM.h"
-#include "Demo/IR/DemoOps.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
@@ -10,10 +11,8 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
-#include "mlir/InitAllExtensions.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
 namespace {
@@ -46,10 +45,10 @@ mlir::OwningOpRef<mlir::ModuleOp> LoadMLIR(mlir::MLIRContext &context) {
 int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "demo compiler");
 
-  mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);
-  registry.insert<mlir::demo::DemoDialect>();
-  mlir::MLIRContext context(registry);
+  mlir::MLIRContext context;
+  mlir::registerAllDialects(context);
+  mlir::demo::registerDialects(context);
+  context.disableMultithreading();
 
   auto module = LoadMLIR(context);
   if (!module) {
@@ -57,12 +56,12 @@ int main(int argc, char *argv[]) {
   }
 
   mlir::PassManager pm(module.get()->getName());
+  pm.enableIRPrinting();
   mlir::demo::AddPassesDemoToLLVM(pm);
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "can't run pass on module";
     return 1;
   }
-  module->dump();
 
   return 0;
 }
