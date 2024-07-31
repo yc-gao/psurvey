@@ -7,3 +7,5 @@ include(TableGen)
 include(AddLLVM)
 include(AddMLIR)
 
+include_directories("${MLIR_INCLUDE_DIRS}")
+
