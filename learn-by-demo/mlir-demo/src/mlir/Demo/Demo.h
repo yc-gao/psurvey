@@ -8,13 +8,13 @@
 namespace mlir {
 namespace demo {
 
-inline void registerDialects(mlir::DialectRegistry& registry) {
+inline void registerAllDialects(mlir::DialectRegistry& registry) {
   registry.insert<mlir::demo::DemoDialect>();
 }
 
-inline void registerDialects(mlir::MLIRContext& context) {
+inline void registerAllDialects(mlir::MLIRContext& context) {
   mlir::DialectRegistry registry;
-  registerDialects(registry);
+  registerAllDialects(registry);
   context.appendDialectRegistry(registry);
 }
 

@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
   llvm::cl::ParseCommandLineOptions(argc, argv, "demo compiler");
   mlir::MLIRContext context;
   mlir::registerAllDialects(context);
-  mlir::demo::registerDialects(context);
+  mlir::demo::registerAllDialects(context);
   context.disableMultithreading();
 
   auto module = LoadMLIR(context);
