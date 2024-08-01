@@ -21,4 +21,14 @@ def PrintOp : DemoOp<"print"> {
     let arguments = (ins F64MemRef:$input);
 }
 
+def PrintImplOp : DemoOp<"print_impl"> {
+    let summary = "print operation";
+    let description = [{
+        The "print" builtin operation prints a given input tensor, and produces
+        no results.
+    }];
+
+    let arguments = (ins F64MemRef:$input);
+}
+
 #endif

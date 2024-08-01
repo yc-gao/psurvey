@@ -10,3 +10,8 @@ func.func @other_func(%arg0 : f32, %arg1 : memref<?xf32>) {
   }
   return
 }
+
+func.func @demo(%arg0 : memref<?xf64>) {
+    "demo.print" (%arg0) : (memref<?xf64>) -> ()
+    return
+}

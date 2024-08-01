@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mlir/Demo/IR/DemoOps.h"
+#include "mlir/Demo/Transforms/Passes.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
@@ -18,7 +19,9 @@ inline void registerAllDialects(mlir::MLIRContext& context) {
   context.appendDialectRegistry(registry);
 }
 
-inline void AddPasses(mlir::PassManager& pm) {}
+inline void AddPasses(mlir::PassManager& pm) {
+  pm.addPass(createDemoNormalizePass());
+}
 
 }  // namespace demo
 }  // namespace mlir
