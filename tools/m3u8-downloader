@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -e
+
+__func_defered=()
+defer() {
+    __func_defered+=("$*")
+}
+do_defer() {
+    for ((i=${#__func_defered[@]}-1;i>=0;i--)); do
+        if ! eval "${__func_defered[i]}"; then
+            echo "eval cmd failed, cmd: \"${__func_defered[i]}\"" >&2
+        fi
+    done
+}
+trap do_defer EXIT
+
+opt_output=output.mp4
+
+opt_headers=()
+opt_concurrent=16
+opt_cache=
+
+do_download() {
+    local temp="$(mktemp -d)"
+    defer "rm -rf ${temp}"
+    if [[ -n "${opt_cache}" ]]; then
+        mkdir -p "${opt_cache}"
+        temp="${opt_cache}"
+    fi
+
+    local url="$1"
+    local url_prefix="$(dirname ${url})"
+    local m3u8="$(basename ${url})"
+
+    local cmd=("curl"
+    "-o" "${temp}/${m3u8}"
+    "-A" "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+    )
+    for header in "${opt_headers[@]}"; do
+        cmd+=("-H" "${header}")
+    done
+    cmd+=("${url}")
+    "${cmd[@]}"
+    cat "${temp}/${m3u8}" \
+        | grep -o -E '[0-9a-z]+\.ts' \
+        | sed -E "s@^@${url_prefix}/@" \
+        >"${temp}"/frags.lst
+    cmd=("aria2c"
+        "-d" "${temp}"
+        "-i" "${temp}/frags.lst"
+        "-U" "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+        "--save-session=${temp}/aria2.session"
+        "-m" "0"
+        "-j" "${opt_concurrent}"
+        "-c" "true"
+        "--http-accept-gzip" "true"
+    )
+    for header in "${opt_headers[@]}"; do
+        cmd+=("--header=${header}")
+    done
+    "${cmd[@]}"
+    ffmpeg -y -i "${temp}/${m3u8}" -c copy "${opt_output}"
+}
+
+main() {
+    while (($#)); do
+        case $1 in
+            -header | --header)
+                opt_headers+=("$2")
+                shift 2
+                ;;
+            -c | --cache-dir)
+                opt_cache="$2"
+                shift 2
+                ;;
+            -j | --max-concurrent-downloads)
+                opt_concurrent="$2"
+                shift 2
+                ;;
+            -o | --output)
+                opt_output="$2"
+                shift 2
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+    for url in "$@"; do
+        do_download "${url}"
+    done
+}
+
+main "$@"
+
