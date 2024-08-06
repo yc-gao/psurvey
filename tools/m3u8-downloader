@@ -49,8 +49,7 @@ do_download() {
         "-d" "${temp}"
         "-i" "${temp}/frags.lst"
         "-U" "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
-        "--save-session=${temp}/aria2.session"
-        "-m" "0"
+        "-m" "8"
         "-j" "${opt_concurrent}"
         "-c" "true"
         "--http-accept-gzip" "true"
@@ -59,7 +58,8 @@ do_download() {
         cmd+=("--header=${header}")
     done
     "${cmd[@]}"
-    ffmpeg -y -i "${temp}/${m3u8}" -c copy "${opt_output}"
+    mkdir -p "$(dirname "${opt_output}")"
+    ffmpeg -hide_banner -loglevel error -y -i "${temp}/${m3u8}" -c copy "${opt_output}"
 }
 
 main() {
