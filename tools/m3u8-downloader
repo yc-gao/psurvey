@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -e
 
+info() {
+    echo "[info] " "$@"
+}
+
 __func_defered=()
 defer() {
     __func_defered+=("$*")
