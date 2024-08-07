@@ -20,6 +20,7 @@ trap do_defer EXIT
 
 opt_output=output.mp4
 
+opt_agent="Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
 opt_headers=()
 opt_concurrent=16
 opt_keep=
@@ -38,7 +39,7 @@ do_download() {
 
     local cmd=("curl"
         "-o" "${temp}/${m3u8}"
-        "-A" "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+        "-A" "${opt_agent}"
     )
     for header in "${opt_headers[@]}"; do
         cmd+=("-H" "${header}")
@@ -57,7 +58,7 @@ do_download() {
     cmd=("aria2c"
         "-d" "${temp}"
         "-i" "${temp}/frags.lst"
-        "-U" "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+        "-U" "${opt_agent}"
         "-m" "8"
         "-j" "${opt_concurrent}"
         "-c" "true"
@@ -74,6 +75,10 @@ do_download() {
 main() {
     while (($#)); do
         case $1 in
+            -A | --agent)
+                opt_agent="$2"
+                shift 2
+                ;;
             -header | --header)
                 opt_headers+=("$2")
                 shift 2
