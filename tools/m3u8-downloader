@@ -18,14 +18,14 @@ opt_output=output.mp4
 
 opt_headers=()
 opt_concurrent=16
-opt_cache=
+opt_keep=
 
 do_download() {
     local temp="$(mktemp -d)"
-    defer "rm -rf ${temp}"
-    if [[ -n "${opt_cache}" ]]; then
-        mkdir -p "${opt_cache}"
-        temp="${opt_cache}"
+    if [[ ${opt_keep} == y ]]; then
+        info "keep workdir ${temp}"
+    else
+        defer "rm -rf ${temp}"
     fi
 
     local url="$1"
@@ -33,8 +33,8 @@ do_download() {
     local m3u8="$(basename ${url})"
 
     local cmd=("curl"
-    "-o" "${temp}/${m3u8}"
-    "-A" "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
+        "-o" "${temp}/${m3u8}"
+        "-A" "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
     )
     for header in "${opt_headers[@]}"; do
         cmd+=("-H" "${header}")
@@ -42,8 +42,13 @@ do_download() {
     cmd+=("${url}")
     "${cmd[@]}"
     cat "${temp}/${m3u8}" \
-        | grep -o -E '[0-9a-z]+\.ts' \
-        | sed -E "s@^@${url_prefix}/@" \
+        | while read -r line; do
+            if [[ "${line}" != \#* ]]; then
+                printf "${url_prefix}/%s\n" "${line}"
+            else
+                printf "${url_prefix}/%s\n" "${line}"
+            fi
+        done \
         >"${temp}"/frags.lst
     cmd=("aria2c"
         "-d" "${temp}"
@@ -59,7 +64,7 @@ do_download() {
     done
     "${cmd[@]}"
     mkdir -p "$(dirname "${opt_output}")"
-    ffmpeg -hide_banner -loglevel error -y -i "${temp}/${m3u8}" -c copy "${opt_output}"
+    ffmpeg -hide_banner -y -i "${temp}/${m3u8}" -c copy "${opt_output}"
 }
 
 main() {
@@ -69,9 +74,9 @@ main() {
                 opt_headers+=("$2")
                 shift 2
                 ;;
-            -c | --cache-dir)
-                opt_cache="$2"
-                shift 2
+            -k | --keep)
+                opt_keep=y
+                shift
                 ;;
             -j | --max-concurrent-downloads)
                 opt_concurrent="$2"
@@ -86,9 +91,7 @@ main() {
                 ;;
         esac
     done
-    for url in "$@"; do
-        do_download "${url}"
-    done
+    do_download "$@"
 }
 
 main "$@"
