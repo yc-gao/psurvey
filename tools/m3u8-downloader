@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -ex
 
 info() {
     echo "[info] " "$@"
@@ -22,40 +22,32 @@ opt_output=output.mp4
 
 opt_agent="Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
 opt_headers=()
-opt_concurrent=16
-opt_keep=
+opt_concurrent=1
 
 do_download() {
     local temp="$(mktemp -d)"
-    if [[ ${opt_keep} == y ]]; then
-        info "keep workdir ${temp}"
-    else
-        defer "rm -rf ${temp}"
-    fi
+    defer "rm -rf ${temp}"
+    # local temp="$(pwd)/cache"
+    # mkdir -p "${temp}"
 
     local url="$1"
-    local url_prefix="$(dirname ${url})"
-    local m3u8="$(basename ${url})"
+    local url_name="${url##*/}"
+    local url_prefix="${url%/*}"
 
-    local cmd=("curl"
-        "-o" "${temp}/${m3u8}"
-        "-A" "${opt_agent}"
-    )
+    local -a cmds
+    cmds=("curl" "-o" "${temp}/${url_name}" "-A" "${opt_agent}")
     for header in "${opt_headers[@]}"; do
         cmd+=("-H" "${header}")
     done
-    cmd+=("${url}")
-    "${cmd[@]}"
-    cat "${temp}/${m3u8}" \
-        | while read -r line; do
-            if [[ "${line}" != \#* ]]; then
-                printf "${url_prefix}/%s\n" "${line}"
-            else
-                printf "${url_prefix}/%s\n" "${line}"
-            fi
-        done \
-        >"${temp}"/frags.lst
-    cmd=("aria2c"
+    cmds+=("${url}")
+    "${cmds[@]}"
+
+    # get all frags
+    cat "${temp}/${url_name}" \
+        | grep -o -E '[0-9a-zA-Z]+\.ts' \
+        | sed -E "s|^|${url_prefix}/|" >"${temp}/frags.lst"
+    
+    cmds=("aria2c"
         "-d" "${temp}"
         "-i" "${temp}/frags.lst"
         "-U" "${opt_agent}"
@@ -65,11 +57,10 @@ do_download() {
         "--http-accept-gzip" "true"
     )
     for header in "${opt_headers[@]}"; do
-        cmd+=("--header=${header}")
+        cmds+=("--header=${header}")
     done
-    "${cmd[@]}"
-    mkdir -p "$(dirname "${opt_output}")"
-    ffmpeg -hide_banner -y -i "${temp}/${m3u8}" -c copy "${opt_output}"
+    "${cmds[@]}"
+    ffmpeg -hide_banner -y -i "${temp}/${url_name}" -c copy "${opt_output}"
 }
 
 main() {
@@ -79,13 +70,9 @@ main() {
                 opt_agent="$2"
                 shift 2
                 ;;
-            -header | --header)
+            -H | --header)
                 opt_headers+=("$2")
                 shift 2
-                ;;
-            -k | --keep)
-                opt_keep=y
-                shift
                 ;;
             -j | --max-concurrent-downloads)
                 opt_concurrent="$2"
