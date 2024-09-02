@@ -18,8 +18,6 @@ do_defer() {
 }
 trap do_defer EXIT
 
-opt_output=output.mp4
-
 opt_agent="Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"
 opt_headers=()
 opt_concurrent=1
@@ -30,7 +28,8 @@ do_download() {
     # local temp="$(pwd)/cache"
     # mkdir -p "${temp}"
 
-    local url="$1"
+    local output="$1"
+    local url="$2"
     local url_name="${url##*/}"
     local url_prefix="${url%/*}"
 
@@ -60,10 +59,12 @@ do_download() {
         cmds+=("--header=${header}")
     done
     "${cmds[@]}"
-    ffmpeg -hide_banner -y -i "${temp}/${url_name}" -c copy "${opt_output}"
+    ffmpeg -hide_banner -y -i "${temp}/${url_name}" -c copy "${output}"
 }
 
 main() {
+    local opt_input=
+    local opt_output="output.mp4"
     while (($#)); do
         case $1 in
             -A | --agent)
@@ -82,12 +83,25 @@ main() {
                 opt_output="$2"
                 shift 2
                 ;;
+            -i)
+                opt_input="$2"
+                shift 2
+                ;;
             *)
                 break
                 ;;
         esac
     done
-    do_download "$@"
+    if [[ -n "${opt_input}" ]]; then
+        cat "${opt_input}" \
+            | while read -r line; do
+                local -a toks
+                IFS=":" read -r -a toks <<<"${line}"
+                do_download "${opt_output:-.}/${toks[0]}" "${toks[1]}"
+            done
+    else
+        do_download "${opt_output}" "$@"
+    fi
 }
 
 main "$@"
