@@ -35,7 +35,10 @@ do_download() {
     local url_prefix="${url%/*}"
 
     local -a cmds
-    cmds=("curl" "-o" "${temp}/${url_name}" "-A" "${opt_agent}")
+    cmds=("curl"
+        "-o" "${temp}/${url_name}"
+        "-A" "${opt_agent}"
+    )
     for header in "${opt_headers[@]}"; do
         cmd+=("-H" "${header}")
     done
@@ -46,7 +49,7 @@ do_download() {
     cat "${temp}/${url_name}" \
         | grep -o -E '[0-9a-zA-Z]+\.ts' \
         | sed -E "s|^|${url_prefix}/|" >"${temp}/frags.lst"
-    
+
     cmds=("aria2c"
         "-d" "${temp}"
         "-i" "${temp}/frags.lst"
