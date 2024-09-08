@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -ex
+set -e
 
 info() {
     echo "[info] " "$@"
@@ -35,10 +35,7 @@ do_download() {
     local url_prefix="${url%/*}"
 
     local -a cmds
-    cmds=("curl"
-        "-o" "${temp}/${url_name}"
-        "-A" "${opt_agent}"
-    )
+    cmds=("curl" "-o" "${temp}/${url_name}" "-A" "${opt_agent}")
     for header in "${opt_headers[@]}"; do
         cmd+=("-H" "${header}")
     done
@@ -47,6 +44,22 @@ do_download() {
 
     # get all frags
     cat "${temp}/${url_name}" \
+        | while read -r line; do
+            if [ "${line}" = "#"* ]; then
+                if [ "${line}" = "#EXT-X-KEY:"* ]; then
+                    local -a toks
+                    IFS="," read -r -a toks <<<"${line}"
+                    for tok in "${toks[@]}"; do
+                        if [ "${tok}" = "URI="* ]; then
+                            ${tok}
+                            echo "${URI}"
+                        fi
+                    done
+                fi
+            else
+                echo "${line}"
+            fi
+        done \
         | grep -o -E '[0-9a-zA-Z]+\.ts' \
         | sed -E "s|^|${url_prefix}/|" >"${temp}/frags.lst"
 
