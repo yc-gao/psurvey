@@ -1,5 +1,7 @@
 build
 .cache
 
+*.pyc
+
 compile_commands.json
 
