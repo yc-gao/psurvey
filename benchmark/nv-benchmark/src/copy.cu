@@ -94,5 +94,6 @@ void kernel_copy(nvbench::state &state, nvbench::type_list<T>) {
 }
 NVBENCH_BENCH_TYPES(
     kernel_copy,
-    NVBENCH_TYPE_AXES(nvbench::type_list<nvbench::int8_t, nvbench::int16_t,
-                                         nvbench::int32_t, nvbench::int64_t>));
+    NVBENCH_TYPE_AXES(
+        nvbench::type_list<nvbench::int8_t, nvbench::int16_t, nvbench::int32_t,
+                           nvbench::int64_t, float4, double4>));
