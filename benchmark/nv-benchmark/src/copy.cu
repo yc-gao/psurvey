@@ -59,26 +59,37 @@ NVBENCH_BENCH_TYPES(
     NVBENCH_TYPE_AXES(nvbench::type_list<nvbench::int8_t, nvbench::int16_t,
                                          nvbench::int32_t, nvbench::int64_t>));
 
-template <typename T>
-__global__ void kernel_copy_impl(T *dst, const T *src, std::size_t count) {
+template <typename T = char>
+__global__ void kernel_copy_impl(void *dst, const void *src,
+                                 std::size_t count) {
   auto idx = blockIdx.x * blockDim.x + threadIdx.x;
-  while (idx < count) {
-    dst[idx] = src[idx];
-    idx += gridDim.x * blockDim.x;
+  auto step = gridDim.x * blockDim.x * sizeof(T);
+
+  auto start = idx * sizeof(T), end = count / sizeof(T) * sizeof(T);
+  for (; start < end; start += step) {
+    *reinterpret_cast<T *>(reinterpret_cast<char *>(dst) + start) =
+        *reinterpret_cast<const T *>(reinterpret_cast<const char *>(src) +
+                                     start);
+  }
+  if (!idx) {
+    while (end < count) {
+      reinterpret_cast<char *>(dst)[end] =
+          reinterpret_cast<const char *>(src)[end];
+      end++;
+    }
   }
 }
 
 template <typename T>
 void kernel_copy(nvbench::state &state, nvbench::type_list<T>) {
-  // 64MB
-  const std::size_t num_values = 64 * 1024 * 1024 / sizeof(T);
-  thrust::device_vector<T> input(num_values);
-  thrust::device_vector<T> output(num_values);
+  auto thread_count = state.get_int64("ThreadCount");
+  const std::size_t num_values = state.get_int64("Size");
+  thrust::device_vector<char> input(num_values);
+  thrust::device_vector<char> output(num_values);
 
   // Provide throughput information:
-  state.add_element_count(num_values, "NumElements");
-  state.add_global_memory_reads<T>(num_values);
-  state.add_global_memory_writes<T>(num_values);
+  state.add_global_memory_reads<char>(num_values);
+  state.add_global_memory_writes<char>(num_values);
 
   state.collect_dram_throughput();
   state.collect_l1_hit_rates();
@@ -87,13 +98,23 @@ void kernel_copy(nvbench::state &state, nvbench::type_list<T>) {
   state.collect_stores_efficiency();
 
   state.exec([=, &input, &output](nvbench::launch &launch) {
-    kernel_copy_impl<T><<<(num_values + 255) / 256, 256>>>(
-        thrust::raw_pointer_cast(output.data()),
-        thrust::raw_pointer_cast(input.data()), num_values);
+    kernel_copy_impl<T>
+        <<<(num_values + thread_count * sizeof(T) - 1) /
+               (thread_count * sizeof(T)),
+           thread_count>>>(thrust::raw_pointer_cast(output.data()),
+                           thrust::raw_pointer_cast(input.data()), num_values);
   });
 }
 NVBENCH_BENCH_TYPES(
     kernel_copy,
-    NVBENCH_TYPE_AXES(
-        nvbench::type_list<nvbench::int8_t, nvbench::int16_t, nvbench::int32_t,
-                           nvbench::int64_t, float4, double4>));
+    NVBENCH_TYPE_AXES(nvbench::type_list<nvbench::int32_t, nvbench::int64_t,
+                                         float4, double4>))
+    .add_int64_axis("ThreadCount", {256, 512})
+    .add_int64_axis("Size", {
+                                64 * 1024 * 1024,
+                                128 * 1024 * 1024,
+                                256 * 1024 * 1024,
+                                64 * 1024 * 1024 + 1,
+                                128 * 1024 * 1024 + 1,
+                                256 * 1024 * 1024 + 1,
+                            });

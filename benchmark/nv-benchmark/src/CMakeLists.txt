@@ -1,6 +1,10 @@
-file(GLOB SRCS *.cu)
-add_executable(main ${SRCS})
-target_link_libraries(main PRIVATE
-    nvbench::nvbench
-    nvbench::main
-)
+macro(add_benchmark name)
+    add_executable(${name} ${ARGN})
+    target_link_libraries(${name} PRIVATE
+        nvbench::nvbench
+        nvbench::main
+    )
+endmacro()
+
+add_benchmark(cu_copy copy.cu)
+
