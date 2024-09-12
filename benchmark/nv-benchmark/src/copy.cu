@@ -71,25 +71,27 @@ __global__ void kernel_copy_impl(void *dst, const void *src,
         *reinterpret_cast<const T *>(reinterpret_cast<const char *>(src) +
                                      start);
   }
-  if (!idx) {
-    while (end < count) {
-      reinterpret_cast<char *>(dst)[end] =
-          reinterpret_cast<const char *>(src)[end];
-      end++;
+  if (start == end) {
+    while (start < count) {
+      reinterpret_cast<char *>(dst)[start] =
+          reinterpret_cast<const char *>(src)[start];
+      start++;
     }
   }
 }
 
 template <typename T>
 void kernel_copy(nvbench::state &state, nvbench::type_list<T>) {
-  auto thread_count = state.get_int64("ThreadCount");
   const std::size_t num_values = state.get_int64("Size");
+  auto shift = state.get_int64("Shift");
+  auto thread_count = state.get_int64("ThreadCount");
+
   thrust::device_vector<char> input(num_values);
   thrust::device_vector<char> output(num_values);
 
   // Provide throughput information:
-  state.add_global_memory_reads<char>(num_values);
-  state.add_global_memory_writes<char>(num_values);
+  state.add_global_memory_reads<char>(num_values - shift);
+  state.add_global_memory_writes<char>(num_values - shift);
 
   state.collect_dram_throughput();
   state.collect_l1_hit_rates();
@@ -98,23 +100,23 @@ void kernel_copy(nvbench::state &state, nvbench::type_list<T>) {
   state.collect_stores_efficiency();
 
   state.exec([=, &input, &output](nvbench::launch &launch) {
-    kernel_copy_impl<T>
-        <<<(num_values + thread_count * sizeof(T) - 1) /
-               (thread_count * sizeof(T)),
-           thread_count>>>(thrust::raw_pointer_cast(output.data()),
-                           thrust::raw_pointer_cast(input.data()), num_values);
+    kernel_copy_impl<T><<<(num_values - shift + thread_count * sizeof(T) - 1) /
+                              (thread_count * sizeof(T)),
+                          thread_count>>>(
+        thrust::raw_pointer_cast(output.data() + shift),
+        thrust::raw_pointer_cast(input.data() + shift), num_values - shift);
   });
 }
 NVBENCH_BENCH_TYPES(
     kernel_copy,
     NVBENCH_TYPE_AXES(nvbench::type_list<nvbench::int32_t, nvbench::int64_t,
                                          float4, double4>))
-    .add_int64_axis("ThreadCount", {256, 512})
-    .add_int64_axis("Size", {
-                                64 * 1024 * 1024,
-                                128 * 1024 * 1024,
-                                256 * 1024 * 1024,
-                                64 * 1024 * 1024 + 1,
-                                128 * 1024 * 1024 + 1,
-                                256 * 1024 * 1024 + 1,
-                            });
+    .add_int64_axis("Size",
+                    {
+                        64 * 1024 * 1024,
+                        128 * 1024 * 1024,
+                        64 * 1024 * 1024 + 1,
+                        128 * 1024 * 1024 + 1,
+                    })
+    .add_int64_axis("Shift", {0})
+    .add_int64_axis("ThreadCount", {256, 512});
