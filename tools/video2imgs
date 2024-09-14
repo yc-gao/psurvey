@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+
+import os
+import argparse
+import pathlib
+
+import cv2
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-o', '--output', default='output')
+    parser.add_argument('--factor', type=int, default=1)
+    parser.add_argument('--format', type=str, default='jpg')
+    parser.add_argument('video')
+    return parser.parse_args()
+
+
+def main():
+    options = parse_args()
+
+    pathlib.Path(options.output).mkdir(parents=True, exist_ok=True)
+
+    idx = 0
+    cap = cv2.VideoCapture(options.video)
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        if idx % options.factor == 0:
+            cv2.imwrite(
+                os.path.join(options.output, f'{idx}.{options.format}'),
+                frame)
+        idx = idx + 1
+
+
+if __name__ == '__main__':
+    main()
