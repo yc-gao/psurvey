@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import sys
 import argparse
 
 import cv2
@@ -10,7 +9,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', '--output', default='result.jpg',
                         help='Resulting image. The default is `result.jpg`.')
-    parser.add_argument('imgs', nargs='+', help='input images')
+    parser.add_argument('img', dest='imgs', nargs='+', help='input images')
     return parser.parse_args()
 
 
@@ -22,8 +21,8 @@ def main():
     status, pano = stitcher.stitch(imgs)
 
     if status != cv2.Stitcher_OK:
-        print("Can't stitch images, error code = %d" % status)
-        sys.exit(-1)
+        raise RuntimeError(
+            "Can't stitch images, error code = %d".format(status))
 
     cv2.imwrite(options.output, pano)
 
