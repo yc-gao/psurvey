@@ -1,5 +1,21 @@
 #!/usr/bin/env bash
 
+info() {
+    echo "[info]" "$@"
+}
+
+err() {
+    echo "[error]" "$@" 2>&1
+}
+
+die() {
+    local code="$1"
+    shift
+
+    err "$@"
+    exit "${code}"
+}
+
 __func_defered=()
 defer() {
     __func_defered+=("$*")
@@ -7,7 +23,7 @@ defer() {
 do_defer() {
     for ((i=${#__func_defered[@]}-1;i>=0;i--)); do
         if ! eval "${__func_defered[i]}"; then
-            echo "eval cmd failed, cmd: \"${__func_defered[i]}\"" >&2
+            die 1 "eval cmd failed, cmd: \"${__func_defered[i]}\""
         fi
     done
 }
