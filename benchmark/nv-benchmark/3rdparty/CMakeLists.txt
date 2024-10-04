@@ -3,4 +3,5 @@ set(CPM_SOURCE_CACHE "$ENV{HOME}/.cache/CPM" CACHE STRING "cpm cache directory")
 include(CPM)
 
 CPMAddPackage("gh:NVIDIA/nvbench#main")
+CPMAddPackage("gh:NVIDIA/cutlass#v3.5.1")
 
