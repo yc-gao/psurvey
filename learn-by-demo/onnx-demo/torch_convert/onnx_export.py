@@ -31,8 +31,7 @@ def main():
     torch_model = NeuralNetwork()
     torch_input = torch.randn(1, 1, 28, 28)
     torch.onnx.export(
-        torch_model, torch_input, args.output, input_names=['x'],
-        output_names=['y'])
+        torch_model, (torch_input, ), args.output, input_names=['x'])
 
 
 if __name__ == '__main__':
