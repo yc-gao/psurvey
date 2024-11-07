@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 info() {
     echo "[info]" "$@"
@@ -17,9 +18,6 @@ die() {
 }
 
 __func_defered=()
-defer() {
-    __func_defered+=("$*")
-}
 do_defer() {
     for ((i=${#__func_defered[@]}-1;i>=0;i--)); do
         if ! eval "${__func_defered[i]}"; then
@@ -28,4 +26,13 @@ do_defer() {
     done
 }
 trap do_defer EXIT
+defer() {
+    __func_defered+=("$*")
+}
+
+main() {
+
+}
+
+main "$@"
 
