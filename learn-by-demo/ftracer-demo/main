@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -ex
+
+info() {
+    echo "[info]" "$@"
+}
+
+err() {
+    echo "[error]" "$@" 2>&1
+}
+
+die() {
+    local code="$1"
+    shift
+
+    err "$@"
+    exit "${code}"
+}
+
+__func_defered=()
+do_defer() {
+    for ((i=${#__func_defered[@]}-1;i>=0;i--)); do
+        if ! eval "${__func_defered[i]}"; then
+            die 1 "eval cmd failed, cmd: \"${__func_defered[i]}\""
+        fi
+    done
+}
+trap do_defer EXIT
+defer() {
+    __func_defered+=("$*")
+}
+
+opt_tracefs="/sys/kernel/tracing"
+
+do_event() {
+    local event="$1"
+
+    echo "${event}" >> "${opt_tracefs}/set_event"
+    defer "echo '!${event}' >> ${opt_tracefs}/set_event"
+}
+
+# ./main -e sched:sched_process_exec -e sched:sched_process_exit -e sched:sched_process_free
+main() {
+    while (($#)); do
+        case "$1" in
+            --tracefs)
+                opt_tracefs="$2"
+                shift 2
+                ;;
+            -e | --event)
+                do_event "$2"
+                shift 2
+                ;;
+            *)
+                break
+                ;;
+        esac
+    done
+
+    echo 1 > "${opt_tracefs}/tracing_on"
+    defer "echo 0 > ${opt_tracefs}/tracing_on"
+    cat "${opt_tracefs}/trace_pipe"
+}
+
+main "$@"
+
