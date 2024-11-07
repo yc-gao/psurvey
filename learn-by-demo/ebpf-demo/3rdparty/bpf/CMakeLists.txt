@@ -38,12 +38,11 @@ function(bpf_object name)
         ERROR_VARIABLE ARCH_error
         RESULT_VARIABLE ARCH_result
         OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if(${ARCH_result} EQUAL 0)
-        set(ARCH ${ARCH_output})
-        message(STATUS "BPF target arch: ${ARCH}")
-    else()
+    if(ARCH_result)
         message(FATAL_ERROR "Failed to determine target architecture: ${ARCH_error}")
     endif()
+    set(ARCH ${ARCH_output})
+    message(STATUS "BPF target arch: ${ARCH}")
 
     execute_process(
         COMMAND bash -c "${CLANG_EXE} -v -E - < /dev/null 2>&1"
@@ -54,12 +53,11 @@ function(bpf_object name)
         RESULT_VARIABLE CLANG_SYSTEM_INCLUDES_result
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
-    if(${CLANG_SYSTEM_INCLUDES_result} EQUAL 0)
-      separate_arguments(CLANG_SYSTEM_INCLUDES UNIX_COMMAND ${CLANG_SYSTEM_INCLUDES_output})
-      message(STATUS "BPF system include flags: ${CLANG_SYSTEM_INCLUDES}")
-    else()
+    if(CLANG_SYSTEM_INCLUDES_result)
       message(FATAL_ERROR "Failed to determine BPF system includes: ${CLANG_SYSTEM_INCLUDES_error}")
     endif()
+    separate_arguments(CLANG_SYSTEM_INCLUDES UNIX_COMMAND ${CLANG_SYSTEM_INCLUDES_output})
+    message(STATUS "BPF system include flags: ${CLANG_SYSTEM_INCLUDES}")
 
     set(${name}_skel ${CMAKE_CURRENT_BINARY_DIR}/${name}.skel.h)
     set(${name}_srcs "${ARGN}")
