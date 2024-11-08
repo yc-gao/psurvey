@@ -114,6 +114,7 @@ int filter_pid = -1;
 int filter_ppid = -1;
 int filter_tgid = -1;
 
+// ./main /usr/bin/bash:readline
 int main(int argc, char *argv[]) {
   std::signal(SIGINT, [](int) { running = false; });
   std::signal(SIGTERM, [](int) { running = false; });
