@@ -1,5 +1,6 @@
 // clang-format off
 #include <csignal>
+#include <iostream>
 #include <cstdio>
 
 #include "blazesym.h"
@@ -76,7 +77,8 @@ static int handle_event([[maybe_unused]] void *ctx, void *data,
                         [[maybe_unused]] size_t data_sz) {
   const struct stacktrace_event *e =
       reinterpret_cast<const struct stacktrace_event *>(data);
-  printf("%-8d%-8s\n", e->pid, e->comm);
+  FormatPrefix(std::cout);
+  printf(" <%s-%d>\n", e->comm, e->pid);
   if (e->kstack_sz > 0) {
     printf("Kstack:\n");
     print_stack(0, e->kstack, e->kstack_sz / sizeof(__u64));
@@ -115,11 +117,6 @@ int main(int argc, char *argv[]) {
       return -1;
     }
   }
-
-  // if (kprobe_bpf__attach(skel)) {
-  //   fprintf(stderr, "Failed to attach BPF skeleton\n");
-  //   return -1;
-  // }
 
   struct ring_buffer *rb =
       ring_buffer__new(bpf_map__fd(skel->maps.rb), handle_event, NULL, NULL);

@@ -1,6 +1,9 @@
 #pragma once
 
+#include <iomanip>
+#include <ostream>
 #include <utility>
+#include <chrono>
 
 template <class F>
 class final_action {
@@ -33,3 +36,14 @@ auto finally(F&& f) noexcept {
 #define _CAT(a, b) a##b
 #define CAT(a, b) _CAT(a, b)
 #define FINALLY(f) auto CAT(__FINALLY__, __COUNTER__) = finally(f)
+
+inline void FormatPrefix(std::ostream &os) {
+  auto now = std::chrono::system_clock::now();
+  std::time_t tm = std::chrono::system_clock::to_time_t(now);
+  auto usec = std::chrono::duration_cast<std::chrono::microseconds>(
+      now - std::chrono::system_clock::from_time_t(tm));
+
+  os << std::put_time(std::localtime(&tm), "%Z %Y-%m-%d %H:%M:%S.")
+     << usec.count();
+}
+
