@@ -144,10 +144,10 @@ int main(int argc, char *argv[]) {
       return -1;
     }
   }
-  if (uprobe_bpf__attach(skel)) {
-    fprintf(stderr, "Failed to attach BPF skeleton\n");
-    return -1;
-  }
+  // if (uprobe_bpf__attach(skel)) {
+  //   fprintf(stderr, "Failed to attach BPF skeleton\n");
+  //   return -1;
+  // }
 
   struct ring_buffer *rb =
       ring_buffer__new(bpf_map__fd(skel->maps.rb), handle_event, NULL, NULL);
