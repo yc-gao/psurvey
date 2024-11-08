@@ -13,3 +13,9 @@ bpf_executable(uprobe
     SRCS     uprobe.cc
     LINKS    blazesym
 )
+
+bpf_executable(kprobe
+    BPF_SRCS kprobe.bpf.c
+    SRCS     kprobe.cc
+    LINKS    blazesym
+)
