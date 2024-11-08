@@ -3,14 +3,14 @@
 #include <cstdio>
 #include <string>
 
-#include "gsl/util"
-
 // clang-format off
 #include "bpf/libbpf.h"
 #include "uprobe_bpf.skel.h"
 #include "uprobe.h"
 #include "blazesym.h"
 // clang-format on
+
+#include "utils.h"
 
 bool running = true;
 static struct blaze_symbolizer *symbolizer;
@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Fail to create a symbolizer\n");
     return -1;
   }
-  gsl::finally([=]() { blaze_symbolizer_free(symbolizer); });
+  FINALLY([=]() { blaze_symbolizer_free(symbolizer); });
 
   libbpf_set_print([](enum libbpf_print_level, const char *format,
                       va_list args) { return vfprintf(stderr, format, args); });
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Failed to open BPF skeleton\n");
     return -1;
   }
-  gsl::finally([=]() { uprobe_bpf__destroy(skel); });
+  FINALLY([=]() { uprobe_bpf__destroy(skel); });
 
   if (uprobe_bpf__load(skel)) {
     fprintf(stderr, "Failed to load BPF skeleton\n");
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Failed to create ring buffer\n");
     return -1;
   }
-  gsl::finally([=]() { ring_buffer__free(rb); });
+  FINALLY([=]() { ring_buffer__free(rb); });
 
   while (running) {
     int err = ring_buffer__poll(rb, 100 /* timeout, ms */);

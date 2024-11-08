@@ -13,4 +13,3 @@ bpf_executable(uprobe
     SRCS     uprobe.cc
     LINKS    blazesym
 )
-target_link_libraries(uprobe PRIVATE GSL)
