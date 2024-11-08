@@ -110,10 +110,6 @@ bool parse_uprobe_entry(struct uprobe_bpf *skel, const char *entry) {
   return true;
 }
 
-int filter_pid = -1;
-int filter_ppid = -1;
-int filter_tgid = -1;
-
 // ./main /usr/bin/bash:readline
 int main(int argc, char *argv[]) {
   std::signal(SIGINT, [](int) { running = false; });
@@ -135,9 +131,6 @@ int main(int argc, char *argv[]) {
     return -1;
   }
   gsl::finally([=]() { uprobe_bpf__destroy(skel); });
-  skel->rodata->filter_pid = filter_pid;
-  skel->rodata->filter_ppid = filter_ppid;
-  skel->rodata->filter_tgid = filter_tgid;
 
   if (uprobe_bpf__load(skel)) {
     fprintf(stderr, "Failed to load BPF skeleton\n");
