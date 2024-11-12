@@ -32,19 +32,53 @@ defer() {
 
 opt_tracefs="/sys/kernel/tracing"
 
+do_kprobe() {
+    # p:myprobe do_sys_open dfd=%ax filename=%dx flags=%cx mode=+4($stack)
+    local kprobe="$1"
+    local pname="${kprobe%% *}"
+    pname="${pname#p:}"
+    pname="${pname#r:}"
+
+    echo "${kprobe}" >> "${opt_tracefs}/kprobe_events"
+    defer "echo '-:${pname}' >> '${opt_tracefs}/kprobe_events'"
+}
+
+do_trigger() {
+    # kmem:kmalloc-stacktrace
+    local -a toks
+    IFS='-' read -r -a toks <<<"${1}"
+
+    local event="${toks[0]}"
+    local trigger="${toks[1]}"
+    echo "${trigger}" > "${opt_tracefs}/events/${event//://}/trigger"
+    defer "echo '!${trigger}' > '${opt_tracefs}/events/${event//://}/trigger'"
+}
+
 do_event() {
+    # sched:sched_process_exec
     local event="$1"
 
     echo "${event}" >> "${opt_tracefs}/set_event"
-    defer "echo '!${event}' >> ${opt_tracefs}/set_event"
+    defer "echo '!${event}' >> '${opt_tracefs}/set_event'"
 }
 
-# ./main -e sched:sched_process_exec -e sched:sched_process_exit -e sched:sched_process_free
+# ./main \
+#   -e sched:sched_process_exec -e sched:sched_process_exit -e sched:sched_process_free \
+#   --kprobe 'p:nvgpu_timeout nvgpu_timeout_expired_msg_cpu' --tigger 'kprobes:nvgpu_timeout-stacktrace' -e 'kprobes:nvgpu_timeout' \
+#   --kprobe 'p:nvgpu_unbind_channel nvgpu_tsg_unbind_channel' --tigger 'kprobes:nvgpu_unbind_channel-stacktrace' -e 'kprobes:nvgpu_unbind_channel' \
 main() {
     while (($#)); do
         case "$1" in
             --tracefs)
                 opt_tracefs="$2"
+                shift 2
+                ;;
+            --kprobe)
+                do_kprobe "$2"
+                shift 2
+                ;;
+            --trigger)
+                do_trigger "$2"
                 shift 2
                 ;;
             -e | --event)
