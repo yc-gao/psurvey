@@ -31,6 +31,7 @@ defer() {
 }
 
 opt_tracefs="/sys/kernel/tracing"
+opt_pid=()
 
 do_kprobe() {
     # p:myprobe do_sys_open dfd=%ax filename=%dx flags=%cx mode=+4($stack)
@@ -81,6 +82,10 @@ main() {
                 do_trigger "$2"
                 shift 2
                 ;;
+            -p | --pid)
+                opt_pid+=("$2")
+                shift 2
+                ;;
             -e | --event)
                 do_event "$2"
                 shift 2
@@ -90,6 +95,18 @@ main() {
                 ;;
         esac
     done
+
+    if [ -n "${opt_pid}" ]; then
+        echo "${opt_pid[*]}" >"${opt_tracefs}/set_event_pid"
+        defer "echo >'${opt_tracefs}/set_event_pid'"
+        echo 1 >"${opt_tracefs}/options/event-fork"
+        defer "echo 0>'${opt_tracefs}/options/event-fork'"
+
+        echo "${opt_pid[*]}" >"${opt_tracefs}/set_ftrace_pid"
+        defer "echo >'${opt_tracefs}/set_ftrace_pid'"
+        echo 1 >"${opt_tracefs}/options/function-fork"
+        defer "echo 0>'${opt_tracefs}/options/function-fork'"
+    fi
 
     echo 1 > "${opt_tracefs}/tracing_on"
     defer "echo 0 > ${opt_tracefs}/tracing_on"
