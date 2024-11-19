@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -ex
+set -e
 
 info() {
     echo "[info]" "$@"
@@ -110,6 +110,9 @@ main() {
 
     echo 1 > "${opt_tracefs}/tracing_on"
     defer "echo 0 > ${opt_tracefs}/tracing_on"
+
+    date -Ins
+    cat /proc/uptime
     cat "${opt_tracefs}/trace_pipe"
 }
 
