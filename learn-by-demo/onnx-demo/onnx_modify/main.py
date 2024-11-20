@@ -102,7 +102,7 @@ class OnnxModel:
     def node_name_to_node(self, name):
         return ([node for node in self.nodes() if node.name == name] + [None])[0]
 
-    def get_nodes_by_optype(self, optype):
+    def optype_to_nodes(self, optype):
         return [node for node in self.nodes() if node.op_type == optype]
 
     def add_node(self, node):
@@ -144,7 +144,7 @@ class OnnxModel:
         self.graph().node.extend(sorted_nodes)
 
     @staticmethod
-    def replace_input_of_node(node, old_input_name, new_input_name):
+    def replace_input_name_of_node(node, old_input_name, new_input_name):
         assert isinstance(old_input_name, str) and isinstance(
             new_input_name, str)
         for idx, i in enumerate(node.input):
@@ -152,30 +152,20 @@ class OnnxModel:
                 node.input[idx] = new_input_name
 
     @staticmethod
-    def replace_output_of_node(node, old_output_name, new_output_name):
+    def replace_output_name_of_node(node, old_output_name, new_output_name):
         assert isinstance(old_output_name, str) and isinstance(
             new_output_name, str)
         for idx, i in enumerate(node.output):
             if i == old_output_name:
                 node.output[idx] = new_output_name
 
-    def replace_input_of_allnodes(self, old_input_name, new_input_name):
+    def replace_input_name_of_allnodes(self, old_input_name, new_input_name):
         for node in self.nodes():
-            self.replace_input_of_node(node, old_input_name, new_input_name)
+            self.replace_input_name_of_node(node, old_input_name, new_input_name)
 
-    def replace_output_of_allnodes(self, old_output_name, new_output_name):
+    def replace_output_name_of_allnodes(self, old_output_name, new_output_name):
         for node in self.nodes():
-            self.replace_output_of_node(node, old_output_name, new_output_name)
-
-    def replace_input_node(self, old_input_node, new_input_node):
-        assert len(old_input_node.output) == len(new_input_node.output)
-        for old_input_name, new_input_name in zip(old_input_node.output, new_input_node.output):
-            self.replace_input_of_allnodes(old_input_name, new_input_name)
-
-    def replace_output_node(self, old_output_node, new_output_node):
-        assert len(old_output_node.output) == len(new_output_node.output)
-        for old_output_name, new_output_name in zip(old_output_node.output, new_output_node.output):
-            self.replace_output_of_allnodes(old_output_name, new_output_name)
+            self.replace_output_name_of_node(node, old_output_name, new_output_name)
 
     # WARNING: must topo sorted
     def input_nodes_of_node(self, node):
