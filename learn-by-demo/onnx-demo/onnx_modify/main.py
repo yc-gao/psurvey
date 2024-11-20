@@ -210,6 +210,10 @@ def main():
     options = parse_options()
     model = OnnxModel(options.model)
 
+    model.topological_sort()
+    if options.output:
+        onnx.save(model.model, options.output)
+
 
 if __name__ == "__main__":
     main()
