@@ -31,7 +31,7 @@ defer() {
 }
 
 opt_tracefs="/sys/kernel/tracing"
-opt_pid=()
+opt_pid=
 
 opt_options=()
 
@@ -71,7 +71,7 @@ main() {
                 opt_options=("${opt_options[@]:2}")
                 ;;
             -p | --pid)
-                opt_pid=("${opt_options[1]}")
+                opt_pid="${opt_options[1]}"
                 opt_options=("${opt_options[@]:2}")
                 ;;
             -e | --event)
@@ -83,13 +83,13 @@ main() {
         esac
     done
 
-    if (("${#opt_pid[@]}")); then
-        echo "${opt_pid[*]}" >"${opt_tracefs}/set_event_pid"
+    if [ -n "${opt_pid}" ]; then
+        echo "${opt_pid}" >"${opt_tracefs}/set_event_pid"
         defer "echo >'${opt_tracefs}/set_event_pid'"
         echo 1 >"${opt_tracefs}/options/event-fork"
         defer "echo 0>'${opt_tracefs}/options/event-fork'"
 
-        echo "${opt_pid[*]}" >"${opt_tracefs}/set_ftrace_pid"
+        echo "${opt_pid}" >"${opt_tracefs}/set_ftrace_pid"
         defer "echo >'${opt_tracefs}/set_ftrace_pid'"
         echo 1 >"${opt_tracefs}/options/function-fork"
         defer "echo 0>'${opt_tracefs}/options/function-fork'"
