@@ -133,10 +133,10 @@ class OnnxModel:
         def dfs(node):
             for input_name in node.input:
                 node = output_name_to_node.get(input_name, None)
-                if not node or node in sorted_node_set:
+                if not node or node.name in sorted_node_set:
                     continue
                 dfs(node)
-                sorted_node_set.add(node)
+                sorted_node_set.add(node.name)
                 sorted_nodes.append(node)
 
         for output_name in self.output_names():
