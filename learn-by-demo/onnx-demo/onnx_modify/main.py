@@ -132,12 +132,11 @@ class OnnxModel:
 
         def dfs(node):
             for input_name in node.input:
-                node = output_name_to_node.get(input_name, None)
-                if not node or node.name in sorted_node_set:
-                    continue
-                dfs(node)
-                sorted_node_set.add(node.name)
-                sorted_nodes.append(node)
+                n = output_name_to_node.get(input_name, None)
+                if n and (n.name not in sorted_node_set):
+                    dfs(n)
+            sorted_node_set.add(node.name)
+            sorted_nodes.append(node)
 
         for output_name in self.output_names():
             dfs(output_name_to_node[output_name])
