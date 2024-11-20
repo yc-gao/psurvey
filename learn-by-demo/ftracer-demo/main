@@ -38,8 +38,8 @@ opt_options=()
 do_event() {
     # sched:sched_process_exec
     local event="${opt_options[1]}"
-    local epath="${opt_tracefs}/events/${event//://}"
     opt_options=("${opt_options[@]:2}")
+    local epath="${opt_tracefs}/events/${event//://}"
 
     while (("${#opt_options[@]}")); do
         case "${opt_options[0]}" in
@@ -56,6 +56,23 @@ do_event() {
 
     echo 1 >"${epath}/enable"
     defer "echo 0 >'${epath}/enable'"
+}
+
+do_kprobe() {
+    local kprobe="${opt_options[1]}"
+    opt_options=("${opt_options[@]:2}")
+    local name="$(cut -d ' ' -f1 <<<"${kprobe}" | cut -c3-)"
+
+    while (("${#opt_options[@]}")); do
+        case "${opt_options[0]}" in
+            *)
+                break
+                ;;
+        esac
+    done
+
+    echo "${kprobe}" >>"${opt_tracefs}/kprobe_events"
+    defer "echo '-:${name}' >>'${opt_tracefs}/kprobe_events'"
 }
 
 # ./main \
@@ -76,6 +93,9 @@ main() {
                 ;;
             -e | --event)
                 do_event
+                ;;
+            --kprobe)
+                do_kprobe
                 ;;
             *)
                 break
