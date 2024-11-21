@@ -7,9 +7,6 @@ import onnx
 
 class OnnxModel:
     def __init__(self, model):
-        self.initialize(model)
-
-    def initialize(self, model):
         assert isinstance(model, (str, onnx.ModelProto))
         if isinstance(model, str):
             model = onnx.load(model)
