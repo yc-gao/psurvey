@@ -127,6 +127,10 @@ class OnnxModel:
 
     def remove_node_by_name(self, name):
         self.remove_node(self.get_node_by_name(name))
+
+    def clear_nodes(self):
+        self.graph().ClearField("node")
+
     # node functions end
 
     def remove_inputs_unused(self):
