@@ -8,9 +8,10 @@ import numpy as np
 
 import onnx
 
-from onnxruntime.quantization.quant_utils import QuantType
+from onnxruntime.quantization.quant_utils import QuantType, QuantizationMode
 from onnxruntime.quantization.calibrate import CalibrationDataReader, CalibrationMethod, create_calibrator
 from onnxruntime.quantization.qdq_quantizer import QDQQuantizer
+from onnxruntime.quantization.onnx_quantizer import ONNXQuantizer
 from onnxruntime.quantization.registry import QLinearOpsRegistry, QDQRegistry
 
 
@@ -74,10 +75,12 @@ def main():
         tensors_range = calibrator.compute_data()
         del calibrator
 
-        quantizer = QDQQuantizer(
+        quantizer = ONNXQuantizer(
             model,
             False,
             False,
+            QuantizationMode.QLinearOps,
+            True,
             QuantType.QInt8,
             QuantType.QInt8,
             tensors_range,
@@ -86,6 +89,18 @@ def main():
             op_types_to_quantize,
             extra_options
         )
+        # quantizer = QDQQuantizer(
+        #     model,
+        #     False,
+        #     False,
+        #     QuantType.QInt8,
+        #     QuantType.QInt8,
+        #     tensors_range,
+        #     nodes_to_quantize,
+        #     nodes_to_exclude,
+        #     op_types_to_quantize,
+        #     extra_options
+        # )
         quantizer.quantize_model()
         if options.output:
             quantizer.model.save_model_to_file(options.output)
