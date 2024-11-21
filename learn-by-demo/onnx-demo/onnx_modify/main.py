@@ -21,7 +21,7 @@ class OnnxModel:
     def input_names(self):
         return [i.name for i in self.graph().input]
 
-    def input_name_to_input(self, name):
+    def get_input_by_name(self, name):
         return ([i for i in self.graph().input if i.name == name] + [None])[0]
 
     def add_input(self, i):
@@ -38,14 +38,14 @@ class OnnxModel:
             self.remove_input(i)
 
     def remove_input_by_name(self, name):
-        self.remove_input(self.input_name_to_input(name))
+        self.remove_input(self.get_input_by_name(name))
     # input functions end
 
     # output functions
     def output_names(self):
         return [i.name for i in self.graph().output]
 
-    def output_name_to_output(self, name):
+    def get_output_by_name(self, name):
         return ([i for i in self.graph().output if i.name == name] + [None])[0]
 
     def add_output(self, i):
@@ -62,14 +62,14 @@ class OnnxModel:
             self.remove_output(o)
 
     def remove_output_by_name(self, name):
-        self.remove_output(self.output_name_to_output(name))
+        self.remove_output(self.get_output_by_name(name))
     # output functions end
 
     # initializer functions
     def initializer_names(self):
         return [i.name for i in self.graph().initializer]
 
-    def initializer_name_to_initializer(self, name):
+    def get_initializer_by_name(self, name):
         return ([i for i in self.graph().initializer if i.name == name] + [None])[0]
 
     def add_initializer(self, i):
@@ -86,23 +86,23 @@ class OnnxModel:
             self.remove_initializer(i)
 
     def remove_initializer_by_name(self, name):
-        self.remove_initializer(self.initializer_name_to_initializer(name))
+        self.remove_initializer(self.get_initializer_by_name(name))
     # initializer functions end
 
     # node functions
     def nodes(self):
         return [node for node in self.graph().node]
 
-    def input_name_to_nodes(self, input_name):
-        return [node for node in self.nodes() if input_name in node.input]
-
-    def output_name_to_node(self, output_name):
-        return ([node for node in self.nodes() if output_name in node.output] + [None])[0]
-
-    def node_name_to_node(self, name):
+    def get_node_by_name(self, name):
         return ([node for node in self.nodes() if node.name == name] + [None])[0]
 
-    def optype_to_nodes(self, optype):
+    def get_node_by_output_name(self, output_name):
+        return ([node for node in self.nodes() if output_name in node.output] + [None])[0]
+
+    def get_nodes_by_input_name(self, input_name):
+        return [node for node in self.nodes() if input_name in node.input]
+
+    def get_nodes_by_optype(self, optype):
         return [node for node in self.nodes() if node.op_type == optype]
 
     def add_node(self, node):
@@ -119,26 +119,34 @@ class OnnxModel:
             self.remove_node(node)
 
     def remove_node_by_name(self, name):
-        self.remove_node(self.node_name_to_node(name))
+        self.remove_node(self.get_node_by_name(name))
     # node functions end
 
-    def topological_sort(self):
+    def topological_sort(self, is_deterministic=False):
         output_name_to_node = {
             output: node for node in self.nodes() for output in node.output
         }
+
+        def do_sort(arr):
+            if not is_deterministic:
+                return arr
+            if not isinstance(arr, list):
+                arr = [x for x in arr]
+            arr.sort(key=lambda x: x.name if hasattr(x, 'name') else x)
+            return arr
 
         sorted_node_set = set()
         sorted_nodes = []
 
         def dfs(node):
-            for input_name in node.input:
+            for input_name in do_sort(node.input):
                 n = output_name_to_node.get(input_name, None)
                 if n and (n.name not in sorted_node_set):
                     dfs(n)
             sorted_node_set.add(node.name)
             sorted_nodes.append(node)
 
-        for output_name in self.output_names():
+        for output_name in do_sort(self.output_names()):
             dfs(output_name_to_node[output_name])
         self.graph().ClearField("node")
         self.graph().node.extend(sorted_nodes)
@@ -161,31 +169,33 @@ class OnnxModel:
 
     def replace_input_name_of_allnodes(self, old_input_name, new_input_name):
         for node in self.nodes():
-            self.replace_input_name_of_node(node, old_input_name, new_input_name)
+            self.replace_input_name_of_node(
+                node, old_input_name, new_input_name)
 
     def replace_output_name_of_allnodes(self, old_output_name, new_output_name):
         for node in self.nodes():
-            self.replace_output_name_of_node(node, old_output_name, new_output_name)
+            self.replace_output_name_of_node(
+                node, old_output_name, new_output_name)
 
-    # WARNING: must topo sorted
-    def input_nodes_of_node(self, node):
-        tmp = []
-        input_names_set = set(node.input)
-        for node in self.nodes()[::-1]:
-            if input_names_set.intersection(node.output):
-                input_names_set.update(node.input)
-                tmp.append(node)
-        return tmp
-
-    # WARNING: must topo sorted
-    def output_nodes_of_node(self, node):
-        tmp = []
-        output_names_set = set(node.output)
-        for node in self.nodes():
-            if output_names_set.intersection(node.input):
-                output_names_set.update(node.output)
-                tmp.append(node)
-        return tmp
+    # # WARNING: must topo sorted
+    # def get_nodes_as_input_of_node(self, node):
+    #     tmp = [node]
+    #     input_names_set = set(node.input)
+    #     for node in self.nodes()[::-1]:
+    #         if input_names_set.intersection(node.output):
+    #             input_names_set.update(node.input)
+    #             tmp.append(node)
+    #     return tmp
+    #
+    # # WARNING: must topo sorted
+    # def output_nodes_of_node(self, node):
+    #     tmp = [node]
+    #     output_names_set = set(node.output)
+    #     for node in self.nodes():
+    #         if output_names_set.intersection(node.input):
+    #             output_names_set.update(node.output)
+    #             tmp.append(node)
+    #     return tmp
 
 
 def parse_options():
