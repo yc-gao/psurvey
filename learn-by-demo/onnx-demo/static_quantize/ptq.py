@@ -53,6 +53,9 @@ def main():
         op_types_to_quantize = list(set(q_linear_ops + qdq_ops))
 
     with tempfile.TemporaryDirectory() as tmp:
+        if options.cache:
+            Path(options.cache).mkdir(parents=True, exist_ok=True)
+            tmp = options.cache
         model_path = Path(options.model)
         inferred_model_path = Path(
             options.cache or tmp)/(model_path.stem + "-inferred" + model_path.suffix)
