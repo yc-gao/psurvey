@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import functools
 
 import onnx
 
@@ -18,6 +19,9 @@ class OnnxModel:
         return self.model.graph
 
     # input functions
+    def inputs(self):
+        return self.graph().input
+
     def input_names(self):
         return [i.name for i in self.graph().input]
 
@@ -42,6 +46,9 @@ class OnnxModel:
     # input functions end
 
     # output functions
+    def outputs(self):
+        return self.graph().output
+
     def output_names(self):
         return [i.name for i in self.graph().output]
 
@@ -66,6 +73,9 @@ class OnnxModel:
     # output functions end
 
     # initializer functions
+    def initializers(self):
+        return self.graph().initializer
+
     def initializer_names(self):
         return [i.name for i in self.graph().initializer]
 
@@ -121,6 +131,20 @@ class OnnxModel:
     def remove_node_by_name(self, name):
         self.remove_node(self.get_node_by_name(name))
     # node functions end
+
+    def remove_inputs_unused(self):
+        tmp = set(functools.reduce(lambda a, b: a + b,
+                  [node.input for node in self.nodes()]))
+        inputs_unused = filter(
+            lambda x: x.name not in tmp, self.inputs())
+        self.remove_inputs(inputs_unused)
+
+    def remove_initializers_unused(self):
+        tmp = set(functools.reduce(lambda a, b: a + b,
+                  [node.input for node in self.nodes()]))
+        initializers_unused = filter(
+            lambda x: x.name not in tmp, self.initializers())
+        self.remove_initializers(initializers_unused)
 
     def topological_sort(self, is_deterministic=False):
         output_name_to_node = {
