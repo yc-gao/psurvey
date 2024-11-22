@@ -136,15 +136,15 @@ class OnnxModel:
     def remove_inputs_unused(self):
         tmp = set(functools.reduce(lambda a, b: a + b,
                   [list(node.input) for node in self.nodes()]))
-        inputs_unused = filter(
-            lambda x: x.name not in tmp, self.inputs())
+        inputs_unused = list(filter(
+            lambda x: x.name not in tmp, self.inputs()))
         self.remove_inputs(inputs_unused)
 
     def remove_initializers_unused(self):
         tmp = set(functools.reduce(lambda a, b: a + b,
                   [list(node.input) for node in self.nodes()]))
-        initializers_unused = filter(
-            lambda x: x.name not in tmp, self.initializers())
+        initializers_unused = list(filter(
+            lambda x: x.name not in tmp, self.initializers()))
         self.remove_initializers(initializers_unused)
 
     def topological_sort(self, is_deterministic=False):
