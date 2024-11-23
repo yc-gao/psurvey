@@ -25,7 +25,7 @@ class FakeResnetCalibrationDataReader(CalibrationDataReader):
 
     def get_next(self) -> dict:
         try:
-            return {"input.1": next(self.iterator)[0]}
+            return {"data": next(self.iterator)[0]}
         except Exception:
             return None
 
@@ -35,6 +35,8 @@ def parse_options():
     parser = argparse.ArgumentParser()
     parser.add_argument('--cache')
     parser.add_argument('-o', '--output', type=str, default='output.onnx')
+    parser.add_argument('-f', '--format', type=str,
+                        default='qdq', choices=['qdq', 'qop'])
     parser.add_argument('model')
     return parser.parse_args()
 
@@ -75,32 +77,34 @@ def main():
         tensors_range = calibrator.compute_data()
         del calibrator
 
-        quantizer = ONNXQuantizer(
-            model,
-            False,
-            False,
-            QuantizationMode.QLinearOps,
-            True,
-            QuantType.QInt8,
-            QuantType.QInt8,
-            tensors_range,
-            nodes_to_quantize,
-            nodes_to_exclude,
-            op_types_to_quantize,
-            extra_options
-        )
-        # quantizer = QDQQuantizer(
-        #     model,
-        #     False,
-        #     False,
-        #     QuantType.QInt8,
-        #     QuantType.QInt8,
-        #     tensors_range,
-        #     nodes_to_quantize,
-        #     nodes_to_exclude,
-        #     op_types_to_quantize,
-        #     extra_options
-        # )
+        if options.format == 'qop':
+            quantizer = ONNXQuantizer(
+                model,
+                False,
+                False,
+                QuantizationMode.QLinearOps,
+                True,
+                QuantType.QInt8,
+                QuantType.QInt8,
+                tensors_range,
+                nodes_to_quantize,
+                nodes_to_exclude,
+                op_types_to_quantize,
+                extra_options
+            )
+        else:
+            quantizer = QDQQuantizer(
+                model,
+                False,
+                False,
+                QuantType.QInt8,
+                QuantType.QInt8,
+                tensors_range,
+                nodes_to_quantize,
+                nodes_to_exclude,
+                op_types_to_quantize,
+                extra_options
+            )
         quantizer.quantize_model()
         if options.output:
             quantizer.model.save_model_to_file(options.output)
