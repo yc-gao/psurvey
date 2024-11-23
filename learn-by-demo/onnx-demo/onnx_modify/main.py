@@ -7,9 +7,10 @@ import onnx
 
 class OnnxModel:
     def __init__(self, model):
-        assert isinstance(model, (str, onnx.ModelProto))
         if isinstance(model, str):
             model = onnx.load(model)
+        assert isinstance(model, onnx.ModelProto)
+        model = onnx.shape_inference.infer_shapes(model)
         self.model = model
 
     def graph(self):
@@ -96,6 +97,33 @@ class OnnxModel:
         self.remove_initializer(self.get_initializer_by_name(name))
     # initializer functions end
 
+    # vinfo functions
+    def vinfos(self):
+        return self.graph().vinfo
+
+    def vinfo_names(self):
+        return [i.name for i in self.graph().vinfo]
+
+    def get_vinfo_by_name(self, name):
+        return ([i for i in self.graph().vinfo if i.name == name] + [None])[0]
+
+    def add_vinfo(self, i):
+        self.add_vinfos([i])
+
+    def add_vinfos(self, vinfos):
+        self.graph().vinfo.extend(vinfos)
+
+    def remove_vinfo(self, i):
+        self.graph().vinfo.remove(i)
+
+    def remove_vinfos(self, vinfos):
+        for i in vinfos:
+            self.remove_vinfo(i)
+
+    def remove_vinfo_by_name(self, name):
+        self.remove_vinfo(self.get_vinfo_by_name(name))
+    # vinfo functions end
+
     # node functions
     def nodes(self):
         return [node for node in self.graph().node]
@@ -136,15 +164,14 @@ class OnnxModel:
     def remove_inputs_unused(self):
         tmp = set(functools.reduce(lambda a, b: a + b,
                   [list(node.input) for node in self.nodes()]))
-        inputs_unused = list(filter(
-            lambda x: x.name not in tmp, self.inputs()))
+        inputs_unused = [x for x in self.inputs() if x.name not in tmp]
         self.remove_inputs(inputs_unused)
 
     def remove_initializers_unused(self):
         tmp = set(functools.reduce(lambda a, b: a + b,
                   [list(node.input) for node in self.nodes()]))
-        initializers_unused = list(filter(
-            lambda x: x.name not in tmp, self.initializers()))
+        initializers_unused = [
+            x for x in self.initializers() if x.name not in tmp]
         self.remove_initializers(initializers_unused)
 
     def topological_sort(self, is_deterministic=False):
