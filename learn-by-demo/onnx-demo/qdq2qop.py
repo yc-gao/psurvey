@@ -56,8 +56,13 @@ class QdqFinalizer:
         self.model.topological_sort()
         self.model.remove_unused()
 
+    def EliminateQdq(self):
+        # TODO: yinchao
+        pass
+
     def Finalize(self):
         self.Qdq2Qop()
+        self.EliminateQdq()
 
 
 @QdqFinalizer.Finalizer('Conv')
