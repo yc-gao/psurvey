@@ -35,7 +35,7 @@ class FakeResnetCalibrationDataReader(CalibrationDataReader):
 # https://github.com/onnx/models/blob/main/validated/vision/classification/resnet/model/resnet50-v2-7.onnx
 def parse_options():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cache')
+    parser.add_argument('--workdir')
     parser.add_argument('-o', '--output', type=str, default='output.onnx')
     parser.add_argument('-f', '--format', type=str,
                         default='qdq', choices=['qdq', 'qop'])
@@ -57,22 +57,23 @@ def main():
         qdq_ops = list(QDQRegistry.keys())
         op_types_to_quantize = list(set(q_linear_ops + qdq_ops))
 
-    with tempfile.TemporaryDirectory() as tmp:
-        if options.cache:
-            Path(options.cache).mkdir(parents=True, exist_ok=True)
-            tmp = options.cache
+    with tempfile.TemporaryDirectory() as workdir:
+        if options.workdir:
+            workdir = options.workdir
+        workdir = Path(workdir)
+        workdir.mkdir(parents=True, exist_ok=True)
+
         model_path = Path(options.model)
-        inferred_model_path = Path(
-            options.cache or tmp)/(model_path.stem + "-inferred" + model_path.suffix)
+        inferred_model_path = workdir / \
+            (model_path.stem + "-inferred" + model_path.suffix)
         onnx.shape_inference.infer_shapes_path(
-            str(model_path), str(inferred_model_path))
+            model_path, inferred_model_path)
         model = onnx.load(inferred_model_path)
 
         calibrator = create_calibrator(
             inferred_model_path,
             op_types_to_quantize,
-            augmented_model_path=Path(inferred_model_path).parent.joinpath(
-                "augmented_model.onnx").as_posix(),
+            augmented_model_path=workdir/"augmented_model.onnx",
             calibrate_method=CalibrationMethod.MinMax,
         )
         calibrator.collect_data(calibration_data_reader)
