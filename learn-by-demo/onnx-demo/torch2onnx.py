@@ -17,7 +17,7 @@ def main():
     model = models.resnet50(models.ResNet50_Weights.IMAGENET1K_V2)
     torch_input = (torch.randn(1, 3, 224, 224), )
     torch.onnx.export(
-        model, torch_input, args.output, input_names=["x"])
+        model, torch_input, args.output, input_names=["data"])
 
 
 if __name__ == '__main__':

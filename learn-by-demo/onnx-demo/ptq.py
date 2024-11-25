@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import argparse
-import random
 import tempfile
 from pathlib import Path
 
@@ -19,15 +18,18 @@ class FakeResnetCalibrationDataReader(CalibrationDataReader):
     def __init__(self, batch_size: int = 16):
         super().__init__()
         self.dataset = [
-            (np.random.rand(1, 3, 224, 224).astype(np.float32), random.randint(0, 999)) for _ in range(batch_size)
+            {'data': np.random.rand(1, 3, 224, 224).astype(np.float32)} for _ in range(batch_size)
         ]
         self.iterator = iter(self.dataset)
 
     def get_next(self) -> dict:
         try:
-            return {"data": next(self.iterator)[0]}
+            return next(self.iterator)
         except Exception:
             return None
+
+    def rewind(self):
+        self.iterator = iter(self.dataset)
 
 
 # https://github.com/onnx/models/blob/main/validated/vision/classification/resnet/model/resnet50-v2-7.onnx
@@ -77,13 +79,11 @@ def main():
         tensors_range = calibrator.compute_data()
         del calibrator
 
-        if options.format == 'qop':
-            quantizer = ONNXQuantizer(
+        if options.format == 'qdq':
+            quantizer = QDQQuantizer(
                 model,
                 False,
                 False,
-                QuantizationMode.QLinearOps,
-                True,
                 QuantType.QInt8,
                 QuantType.QInt8,
                 tensors_range,
@@ -93,10 +93,12 @@ def main():
                 extra_options
             )
         else:
-            quantizer = QDQQuantizer(
+            quantizer = ONNXQuantizer(
                 model,
                 False,
                 False,
+                QuantizationMode.QLinearOps,
+                True,
                 QuantType.QInt8,
                 QuantType.QInt8,
                 tensors_range,
