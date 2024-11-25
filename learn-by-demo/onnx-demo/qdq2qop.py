@@ -21,17 +21,17 @@ class QdqFinalizer:
         return wrapper
 
     @staticmethod
-    def DoFinalize(node, input_name_to_qdq, output_name_to_qdq):
+    def DoFinalize(node, input_name_to_q, output_name_to_dq):
         op_finalizer = QdqFinalizer.FinalizerRegistry.get(node.op_type, None)
         if op_finalizer:
-            return op_finalizer.Finalize(node, input_name_to_qdq, output_name_to_qdq)
+            return op_finalizer.Finalize(node, input_name_to_q, output_name_to_dq)
         return [], [], [], {}
 
-    def Finalize(self):
-        output_name_to_qdq = {
+    def Qdq2Qop(self):
+        output_name_to_dq = {
             node.output[0]: node for node in self.model.nodes() if node.op_type == 'DequantizeLinear'
         }
-        input_name_to_qdq = {
+        input_name_to_q = {
             node.input[0]: node for node in self.model.nodes() if node.op_type == 'QuantizeLinear'
         }
 
@@ -42,21 +42,22 @@ class QdqFinalizer:
         for node in self.model.nodes():
             new_nodes.append(node)
             output_nodes, initializers, merged_nodes, io_map = QdqFinalizer.DoFinalize(
-                node, input_name_to_qdq, output_name_to_qdq)
-            if not output_nodes:
-                continue
+                node, input_name_to_q, output_name_to_dq)
             nodes_merged_set.update([n.name for n in merged_nodes])
             new_nodes.extend(output_nodes)
             new_initializers.extend(initializers)
             io_maps.update(io_map)
 
-        nodes = [node for node in new_nodes if node.name not in nodes_merged_set]
         self.model.clear_nodes()
-        self.model.add_nodes(nodes)
+        self.model.add_nodes(
+            [node for node in new_nodes if node.name not in nodes_merged_set])
         self.model.add_initializers(new_initializers)
         self.model.remap_names(io_maps)
         self.model.topological_sort()
         self.model.remove_unused()
+
+    def Finalize(self):
+        self.Qdq2Qop()
 
 
 @QdqFinalizer.Finalizer('Conv')
