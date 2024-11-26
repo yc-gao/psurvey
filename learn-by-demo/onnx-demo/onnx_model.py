@@ -190,7 +190,7 @@ class OnnxModel:
         self.graph().ClearField("node")
         self.graph().node.extend(sorted_nodes)
 
-    def remove_unused(self):
+    def remove_unused(self, node=True, input=True, initializer=True):
         output_name_to_node = {
             output: node for node in self.nodes() for output in node.output
         }
@@ -213,14 +213,17 @@ class OnnxModel:
         for output_name in self.output_names():
             dfs(output_name_to_node[output_name])
 
-        self.remove_vinfos(
-            [i for i in self.vinfos() if i.name not in vinfo_visited])
-        self.remove_nodes([node for node in self.nodes()
-                          if node.name not in node_visited])
-        self.remove_inputs(
-            [i for i in self.inputs() if i.name not in input_visited])
-        self.remove_initializers(
-            [i for i in self.initializers() if i.name not in input_visited])
+        if input:
+            self.remove_inputs(
+                [i for i in self.inputs() if i.name not in input_visited])
+        if initializer:
+            self.remove_initializers(
+                [i for i in self.initializers() if i.name not in input_visited])
+        if node:
+            self.remove_vinfos(
+                [i for i in self.vinfos() if i.name not in vinfo_visited])
+            self.remove_nodes([node for node in self.nodes()
+                              if node.name not in node_visited])
 
     def remap_names(self, io_maps):
         for i in self.inputs():
