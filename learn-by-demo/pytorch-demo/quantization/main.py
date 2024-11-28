@@ -2,10 +2,37 @@
 import argparse
 
 import torch
+from torch.ao.quantization import get_default_qconfig_mapping
+from torch.ao.quantization.quantize_fx import prepare_fx, convert_fx
 
-import torchvision
 
 from imagenet_pipeline import ImageNetPipeline, transform_iterator
+
+
+class M(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.conv0 = torch.nn.Conv2d(3, 5, 3)
+        self.bn0 = torch.nn.BatchNorm2d(5)
+        self.relu0 = torch.nn.ReLU()
+
+        self.conv1 = torch.nn.Conv2d(5, 5, 3)
+        self.bn1 = torch.nn.BatchNorm2d(5)
+        self.relu1 = torch.nn.ReLU()
+
+        self.conv2 = torch.nn.Conv2d(5, 5, 3)
+
+    def forward(self, x):
+        x = self.conv0(x)
+        x = self.bn0(x)
+        x = self.relu0(x)
+
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu1(x)
+
+        x = self.conv2(x)
+        return x
 
 
 def parse_options():
@@ -19,23 +46,29 @@ def parse_options():
 def main():
     options = parse_options()
 
-    device = torch.device('cpu')
-    # if torch.cuda.is_available():
-    #     device = torch.device('cuda')
+    dataloader = ImageNetPipeline.get_dataloader(options.dataset_path)
 
-    dataloader = transform_iterator(
-        ImageNetPipeline.get_dataloader(options.dataset_path), lambda items: [x.to(device) for x in items])
+    float_model = M().eval()
 
-    model_quantized = torchvision.models.quantization.mobilenet_v2(
-        pretrained=True, quantize=True)
-    model_quantized = model_quantized.to(device)
+    backend = 'x86'
+    qconfig_mapping = get_default_qconfig_mapping(backend)
+    # qconfig_mapping = get_default_qconfig_mapping("fbgemm")
+    # torch.backends.quantized.engine = backend
 
-    acc, _, _ = ImageNetPipeline.eval(model_quantized, dataloader)
-    print(f"model, acc: {acc * 100:.4f}%")
+    example_inputs = (torch.randn(1, 3, 224, 224),)
+    prepared_model = prepare_fx(float_model, qconfig_mapping, example_inputs)
+    # print(prepared_model.code)
+
+    ImageNetPipeline.calibrate(prepared_model, dataloader)
+    quantized_model = convert_fx(prepared_model)
+    # print(quantized_model.code)
+
+    # acc, _, _ = ImageNetPipeline.eval(prepared_model, dataloader)
+    # print(f"model, acc: {acc * 100:.4f}%")
 
     if options.output:
         torch.onnx.export(
-            model_quantized,
+            quantized_model,
             (next(iter(dataloader))[0], ),
             options.output,
         )
