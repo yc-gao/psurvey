@@ -9,8 +9,11 @@ class OnnxModel:
         if isinstance(model, str):
             model = onnx.load(model)
         assert isinstance(model, onnx.ModelProto)
-        model = onnx.shape_inference.infer_shapes(model)
         self.model = model
+        self.infer_shape()
+
+    def infer_shape(self):
+        self.model = onnx.shape_inference.infer_shapes(self.model)
 
     def graph(self):
         return self.model.graph
@@ -225,28 +228,64 @@ class OnnxModel:
             self.remove_nodes([node for node in self.nodes()
                               if node.name not in node_visited])
 
-    def remap_names(self, io_maps):
-        for i in self.inputs():
-            new_input_name = io_maps.get(i.name, None)
-            if new_input_name:
-                i.name = new_input_name
-        for i in self.initializers():
-            new_input_name = io_maps.get(i.name, None)
-            if new_input_name:
-                i.name = new_input_name
+    def remap_input_names(self, input_name_map):
         for node in self.nodes():
             for idx, input_name in enumerate(node.input):
-                new_input_name = io_maps.get(input_name, None)
+                new_input_name = input_name_map.get(input_name, None)
                 if new_input_name:
                     node.input[idx] = new_input_name
-            for idx, output_name in enumerate(node.output):
-                new_output_name = io_maps.get(output_name, None)
-                if new_output_name:
-                    node.output[idx] = new_output_name
-        for vinfo in self.vinfos():
-            new_name = io_maps.get(vinfo.name, None)
-            if new_name:
-                vinfo.name = new_name
+
+    def eliminate_cast(self):
+        name_to_dtype = {
+            v.name: v.type.tensor_type.elem_type for v in self.vinfos() if v.type.HasField('tensor_type')
+        }
+        name_to_dtype.update({
+            v.name: v.type.tensor_type.elem_type for v in self.inputs() if v.type.HasField('tensor_type')
+        })
+        name_to_dtype.update({
+            v.name: v.type.tensor_type.elem_type for v in self.outputs() if v.type.HasField('tensor_type')
+        })
+        name_to_dtype.update({
+            v.name: v.data_type for v in self.initializers()
+        })
+
+        input_name_map = {}
+        for node in reversed(self.nodes()):
+            if node.op_type == 'Cast':
+                itype = name_to_dtype.get(node.input[0], None)
+                otype = name_to_dtype.get(node.output[0], None)
+                if itype and otype and otype == itype:
+                    input_name_map[node.output[0]] = node.input[0]
+
+        self.remap_input_names(input_name_map)
+        self.remove_unused()
+
+    def merge_qdq(self):
+        output_name_to_node = {
+            output: node for node in self.nodes() for output in node.output
+        }
+
+        input_name_map = {}
+
+        node_merged = set()
+        for node in reversed(self.nodes()):
+            if node.name in node_merged:
+                continue
+            if node.op_type == 'DequantizeLinear':
+                inode = output_name_to_node.get(node.input[0], None)
+                if inode and inode.op_type == 'QuantizeLinear':
+                    input_name_map[node.output[0]] = inode.input[0]
+                    node_merged.add(node.name)
+                    node_merged.add(inode.name)
+            elif node.op_type == 'QuantizeLinear':
+                inode = output_name_to_node.get(node.input[0], None)
+                if inode and inode.op_type == 'DequantizeLinear':
+                    input_name_map[node.output[0]] = inode.input[0]
+                    node_merged.add(node.name)
+                    node_merged.add(inode.name)
+
+        self.remap_input_names(input_name_map)
+        self.remove_unused()
 
 
 def parse_options():
