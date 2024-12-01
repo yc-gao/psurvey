@@ -287,6 +287,22 @@ class OnnxModel:
         self.remap_input_names(input_name_map)
         self.remove_unused()
 
+    def constant2initializer(self):
+        initializer_added = set()
+        node_removed = set()
+
+        for node in self.nodes():
+            if node.op_type == 'Constant':
+                assert len(node.attribute) == 1
+                attr = node.attribute[0]
+                if attr.HasField('t'):
+                    attr.t.name = attr.name
+                    initializer_added.add(attr.t)
+                    node_removed.add(node)
+
+        self.remove_nodes(node_removed)
+        self.add_initializers(initializer_added)
+
 
 def parse_options():
     parser = argparse.ArgumentParser()
