@@ -89,7 +89,7 @@ main() {
     done
 
     if [ -z "${action}" ]; then
-        die "undefined action"
+        die 1 "undefined action"
     fi
     "${action}"
 }
