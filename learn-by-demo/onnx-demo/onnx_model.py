@@ -228,6 +228,18 @@ class OnnxModel:
             self.remove_nodes([node for node in self.nodes()
                               if node.name not in node_visited])
 
+    def replace_input_of_all_nodes(self, old_name, new_name):
+        for node in self.nodes():
+            for idx, input_name in node.input:
+                if input_name == old_name:
+                    node.input[idx] = new_name
+
+    def replace_output_of_all_nodes(self, old_name, new_name):
+        for node in self.nodes():
+            for idx, input_name in node.output:
+                if input_name == old_name:
+                    node.output[idx] = new_name
+
     def remap_input_names(self, input_name_map):
         for node in self.nodes():
             for idx, input_name in enumerate(node.input):
