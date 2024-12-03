@@ -12,7 +12,7 @@ class NormlizeModel:
                 assert len(node.attribute) == 1
                 attr = node.attribute[0]
                 if attr.HasField('t'):
-                    attr.t.name = attr.name
+                    attr.t.name = node.output[0]
                     initializer_added.append(attr.t)
                     node_removed.append(node)
 
