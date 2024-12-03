@@ -272,6 +272,14 @@ class OnnxModel:
         self.remap_input_names(input_name_map)
         self.remove_unused()
 
+    def eliminate_identity(self):
+        input_name_map = {}
+        for node in self.nodes():
+            if node.op_type == 'Identity':
+                input_name_map[node.output[0]] = node.input[0]
+        self.remap_input_names(input_name_map)
+        self.remove_unused()
+
     def merge_qdq(self):
         output_name_to_node = {
             output: node for node in self.nodes() for output in node.output
@@ -300,8 +308,8 @@ class OnnxModel:
         self.remove_unused()
 
     def constant2initializer(self):
-        initializer_added = set()
-        node_removed = set()
+        initializer_added = []
+        node_removed = []
 
         for node in self.nodes():
             if node.op_type == 'Constant':
@@ -309,8 +317,8 @@ class OnnxModel:
                 attr = node.attribute[0]
                 if attr.HasField('t'):
                     attr.t.name = attr.name
-                    initializer_added.add(attr.t)
-                    node_removed.add(node)
+                    initializer_added.append(attr.t)
+                    node_removed.append(node)
 
         self.remove_nodes(node_removed)
         self.add_initializers(initializer_added)
