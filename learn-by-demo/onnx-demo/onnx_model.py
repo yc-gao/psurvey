@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 import argparse
+import os
 
 import onnx
 
 
 class OnnxModel:
     def __init__(self, model):
+        if isinstance(model, os.PathLike):
+            model = os.fspath(model)
         if isinstance(model, str):
             model = onnx.load(model)
         assert isinstance(model, onnx.ModelProto)
@@ -13,7 +16,14 @@ class OnnxModel:
         self.infer_shape()
 
     def save(self, fpath):
+        if isinstance(fpath, os.PathLike):
+            fpath = os.fspath(fpath)
         onnx.save(self.model, fpath)
+
+    def clone(self):
+        t = onnx.ModelProto()
+        t.CopyFrom(self.model)
+        return OnnxModel(t)
 
     def infer_shape(self):
         self.model = onnx.shape_inference.infer_shapes(self.model)
