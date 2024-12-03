@@ -12,6 +12,9 @@ class OnnxModel:
         self.model = model
         self.infer_shape()
 
+    def save(self, fpath):
+        onnx.save(self.model, fpath)
+
     def infer_shape(self):
         self.model = onnx.shape_inference.infer_shapes(self.model)
 
@@ -247,82 +250,6 @@ class OnnxModel:
                 if new_input_name:
                     node.input[idx] = new_input_name
 
-    def eliminate_cast(self):
-        name_to_dtype = {
-            v.name: v.type.tensor_type.elem_type for v in self.vinfos() if v.type.HasField('tensor_type')
-        }
-        name_to_dtype.update({
-            v.name: v.type.tensor_type.elem_type for v in self.inputs() if v.type.HasField('tensor_type')
-        })
-        name_to_dtype.update({
-            v.name: v.type.tensor_type.elem_type for v in self.outputs() if v.type.HasField('tensor_type')
-        })
-        name_to_dtype.update({
-            v.name: v.data_type for v in self.initializers()
-        })
-
-        input_name_map = {}
-        for node in reversed(self.nodes()):
-            if node.op_type == 'Cast':
-                itype = name_to_dtype.get(node.input[0], None)
-                otype = name_to_dtype.get(node.output[0], None)
-                if itype and otype and otype == itype:
-                    input_name_map[node.output[0]] = node.input[0]
-
-        self.remap_input_names(input_name_map)
-        self.remove_unused()
-
-    def eliminate_identity(self):
-        input_name_map = {}
-        for node in self.nodes():
-            if node.op_type == 'Identity':
-                input_name_map[node.output[0]] = node.input[0]
-        self.remap_input_names(input_name_map)
-        self.remove_unused()
-
-    def merge_qdq(self):
-        output_name_to_node = {
-            output: node for node in self.nodes() for output in node.output
-        }
-
-        input_name_map = {}
-
-        node_merged = set()
-        for node in reversed(self.nodes()):
-            if node.name in node_merged:
-                continue
-            if node.op_type == 'DequantizeLinear':
-                inode = output_name_to_node.get(node.input[0], None)
-                if inode and inode.op_type == 'QuantizeLinear':
-                    input_name_map[node.output[0]] = inode.input[0]
-                    node_merged.add(node.name)
-                    node_merged.add(inode.name)
-            elif node.op_type == 'QuantizeLinear':
-                inode = output_name_to_node.get(node.input[0], None)
-                if inode and inode.op_type == 'DequantizeLinear':
-                    input_name_map[node.output[0]] = inode.input[0]
-                    node_merged.add(node.name)
-                    node_merged.add(inode.name)
-
-        self.remap_input_names(input_name_map)
-        self.remove_unused()
-
-    def constant2initializer(self):
-        initializer_added = []
-        node_removed = []
-
-        for node in self.nodes():
-            if node.op_type == 'Constant':
-                assert len(node.attribute) == 1
-                attr = node.attribute[0]
-                if attr.HasField('t'):
-                    attr.t.name = attr.name
-                    initializer_added.append(attr.t)
-                    node_removed.append(node)
-
-        self.remove_nodes(node_removed)
-        self.add_initializers(initializer_added)
-
 
 def parse_options():
     parser = argparse.ArgumentParser()
@@ -337,7 +264,7 @@ def main():
 
     model.topological_sort()
     if options.output:
-        onnx.save(model.model, options.output)
+        model.save(options.output)
 
 
 if __name__ == "__main__":
