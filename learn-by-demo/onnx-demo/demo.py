@@ -2,11 +2,13 @@
 import argparse
 from pathlib import Path
 
+
 from onnx_model import OnnxModel
-from normlize_model import NormlizeModel
+from matcher import DagMatcher
+
 from eliminate_cast import EliminateCast
 from eliminate_identity import EliminateIdentity
-from merge_qdq import MergeQdq
+from eliminate_qdq import EliminateQdq
 
 
 def unique_count(items: list) -> dict:
@@ -25,30 +27,19 @@ def parse_options():
 
 def main():
     options = parse_options()
-    model = OnnxModel(options.model)
 
-    model = NormlizeModel.apply(model)
-    model = EliminateIdentity.apply(model)
-    model = EliminateCast.apply(model)
+    onnx_model = OnnxModel(options.model)
+    onnx_model = EliminateCast.apply(onnx_model)
+    onnx_model = EliminateIdentity.apply(onnx_model)
 
-    tensor_name_to_count = unique_count(
-        [input_name for node in model.nodes() for input_name in node.input])
-    output_name_to_node = {
-        output: node for node in model.nodes() for output in node.output
-    }
-    input_name_to_q = {
-        input_name: node for node in model.get_nodes_by_optype('QuantizeLinear') for input_name in node.input
-    }
-    input_name_to_dq = {
-        input_name: node for node in model.get_nodes_by_optype('DequantizeLinear') for input_name in node.input
-    }
+    unquanzed_model = EliminateQdq.apply(onnx_model.clone())
 
-    unquanzed_model = MergeQdq.apply(model.clone())
-
-    model.topological_sort()
+    onnx_model.topological_sort()
+    unquanzed_model.topological_sort()
     if options.output:
         output = Path(options.output)
         output.mkdir(parents=True, exist_ok=True)
+        onnx_model.save(output/'model.onnx')
         unquanzed_model.save(output/'model.unquanzed.onnx')
 
 

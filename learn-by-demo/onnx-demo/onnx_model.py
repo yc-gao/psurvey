@@ -5,41 +5,61 @@ import os
 import onnx
 
 
-class OnnxModel:
+class ModelVistor:
     def __init__(self, model):
         if isinstance(model, os.PathLike):
             model = os.fspath(model)
         if isinstance(model, str):
             model = onnx.load(model)
         assert isinstance(model, onnx.ModelProto)
-        self.model = model
-        self.infer_shape()
+        model = onnx.shape_inference.infer_shapes(model)
+        self.ReInit(model)
+
+    def ReInit(self, model=None):
+        self.model = model or self.model
+        self.node_name_to_node = {
+            x.name: x for x in self.nodes()
+        }
+        self.output_name_to_node = {
+            output: node for node in self.nodes() for output in node.output
+        }
+        self.input_name_to_nodes = {}
+        for node in self.nodes():
+            for input_name in node.input:
+                item = self.input_name_to_nodes.get(input_name, [])
+                item.append(node)
+                self.input_name_to_nodes[input_name] = item
+
+        self.input_name_to_vinfo = {
+            x.name: x for x in self.inputs()
+        }
+        self.value_name_to_vinfo = {
+            x.name: x for x in self.vinfos()
+        }
+        self.initializer_name_to_vinfo = {
+            x.name: x for x in self.initializers()
+        }
+        self.output_name_to_vinfo = {
+            x.name: x for x in self.inputs()
+        }
 
     def save(self, fpath):
         if isinstance(fpath, os.PathLike):
             fpath = os.fspath(fpath)
         onnx.save(self.model, fpath)
 
-    def clone(self):
-        t = onnx.ModelProto()
-        t.CopyFrom(self.model)
-        return OnnxModel(t)
-
-    def infer_shape(self):
-        self.model = onnx.shape_inference.infer_shapes(self.model)
-
     def graph(self):
         return self.model.graph
 
     # input functions
     def inputs(self):
-        return self.graph().input
+        return [x for x in self.graph().input]
 
     def input_names(self):
         return [i.name for i in self.inputs()]
 
     def get_input_by_name(self, name):
-        return ([i for i in self.inputs() if i.name == name] + [None])[0]
+        return self.input_name_to_vinfo.get(name, None)
 
     def add_input(self, i):
         self.add_inputs([i])
@@ -60,13 +80,13 @@ class OnnxModel:
 
     # output functions
     def outputs(self):
-        return self.graph().output
+        return [x for x in self.graph().output]
 
     def output_names(self):
         return [i.name for i in self.outputs()]
 
     def get_output_by_name(self, name):
-        return ([i for i in self.outputs() if i.name == name] + [None])[0]
+        return self.output_name_to_vinfo.get(name, None)
 
     def add_output(self, i):
         self.add_outputs([i])
@@ -87,13 +107,13 @@ class OnnxModel:
 
     # initializer functions
     def initializers(self):
-        return self.graph().initializer
+        return [x for x in self.graph().initializer]
 
     def initializer_names(self):
         return [i.name for i in self.initializers()]
 
     def get_initializer_by_name(self, name):
-        return ([i for i in self.initializers() if i.name == name] + [None])[0]
+        return self.initializer_name_to_vinfo.get(name, None)
 
     def add_initializer(self, i):
         self.add_initializers([i])
@@ -114,13 +134,13 @@ class OnnxModel:
 
     # vinfo functions
     def vinfos(self):
-        return self.graph().value_info
+        return [x for x in self.graph().value_info]
 
     def vinfo_names(self):
         return [i.name for i in self.vinfos()]
 
     def get_vinfo_by_name(self, name):
-        return ([i for i in self.vinfos() if i.name == name] + [None])[0]
+        return self.value_name_to_vinfo.get(name, None)
 
     def add_vinfo(self, i):
         self.add_vinfos([i])
@@ -144,13 +164,13 @@ class OnnxModel:
         return [node for node in self.graph().node]
 
     def get_node_by_name(self, name):
-        return ([node for node in self.nodes() if node.name == name] + [None])[0]
+        return self.node_name_to_node.get(name, None)
 
     def get_node_by_output_name(self, output_name):
-        return ([node for node in self.nodes() if output_name in node.output] + [None])[0]
+        return self.output_name_to_node.get(output_name, None)
 
     def get_nodes_by_input_name(self, input_name):
-        return [node for node in self.nodes() if input_name in node.input]
+        return self.input_name_to_nodes.get(input_name, {})
 
     def get_nodes_by_optype(self, optype):
         return [node for node in self.nodes() if node.op_type == optype]
@@ -175,10 +195,20 @@ class OnnxModel:
         self.graph().ClearField("node")
     # node functions end
 
+
+class OnnxModel(ModelVistor):
+    def __init__(self, model):
+        super().__init__(model)
+
+    def clone(self):
+        t = onnx.ModelProto()
+        t.CopyFrom(self.model)
+        return OnnxModel(t)
+
     def topological_sort(self, is_deterministic=False):
-        output_name_to_node = {
-            output: node for node in self.nodes() for output in node.output
-        }
+
+        node_visited = set()
+        sorted_nodes = []
 
         def do_sort(arr):
             if not is_deterministic:
@@ -188,46 +218,42 @@ class OnnxModel:
             arr.sort(key=lambda x: x.name if hasattr(x, 'name') else x)
             return arr
 
-        node_visited = set()
-        sorted_nodes = []
-
         def dfs(node):
+            if not node:
+                return
             if node.name in node_visited:
                 return
             node_visited.add(node.name)
             for input_name in do_sort(node.input):
-                n = output_name_to_node.get(input_name, None)
-                if n:
-                    dfs(n)
+                dfs(self.output_name_to_node.get(input_name, None))
             sorted_nodes.append(node)
 
         for output_name in do_sort(self.output_names()):
-            dfs(output_name_to_node[output_name])
+            dfs(self.output_name_to_node.get(output_name, None))
+
         self.graph().ClearField("node")
         self.graph().node.extend(sorted_nodes)
 
-    def remove_unused(self, node=True, input=True, initializer=True):
-        output_name_to_node = {
-            output: node for node in self.nodes() for output in node.output
-        }
-
+    def remove_unused(self, input=True, initializer=True, node=True):
+        input_visited = set()
         node_visited = set()
         vinfo_visited = set()
-        input_visited = set()
 
         def dfs(node):
+            if not node:
+                return
             if node.name in node_visited:
                 return
             node_visited.add(node.name)
             vinfo_visited.update(node.output)
             for input_name in node.input:
-                n = output_name_to_node.get(input_name, None)
+                n = self.output_name_to_node.get(input_name, None)
                 if n:
                     dfs(n)
                 else:
                     input_visited.add(input_name)
         for output_name in self.output_names():
-            dfs(output_name_to_node[output_name])
+            dfs(self.output_name_to_node.get(output_name, None))
 
         if input:
             self.remove_inputs(
@@ -236,22 +262,10 @@ class OnnxModel:
             self.remove_initializers(
                 [i for i in self.initializers() if i.name not in input_visited])
         if node:
-            self.remove_vinfos(
-                [i for i in self.vinfos() if i.name not in vinfo_visited])
             self.remove_nodes([node for node in self.nodes()
                               if node.name not in node_visited])
-
-    def replace_input_of_all_nodes(self, old_name, new_name):
-        for node in self.nodes():
-            for idx, input_name in node.input:
-                if input_name == old_name:
-                    node.input[idx] = new_name
-
-    def replace_output_of_all_nodes(self, old_name, new_name):
-        for node in self.nodes():
-            for idx, input_name in node.output:
-                if input_name == old_name:
-                    node.output[idx] = new_name
+            self.remove_vinfos(
+                [i for i in self.vinfos() if i.name not in vinfo_visited])
 
     def remap_input_names(self, input_name_map):
         for node in self.nodes():
@@ -259,6 +273,13 @@ class OnnxModel:
                 new_input_name = input_name_map.get(input_name, None)
                 if new_input_name:
                     node.input[idx] = new_input_name
+
+    def remap_output_names(self, output_name_map):
+        for node in self.nodes():
+            for idx, output_name in enumerate(node.output):
+                new_output_name = output_name_map.get(output_name, None)
+                if new_output_name:
+                    node.output[idx] = new_output_name
 
 
 def parse_options():

@@ -27,4 +27,5 @@ class EliminateCast:
 
         onnx_model.remap_input_names(input_name_map)
         onnx_model.remove_unused()
+        onnx_model.ReInit()
         return onnx_model
