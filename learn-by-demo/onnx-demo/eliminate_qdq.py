@@ -27,6 +27,8 @@ class EliminateQdq:
 
         node_merged = set()
         for node in reversed(onnx_model.nodes()):
+            if node.name in node_merged:
+                continue
             ret, dag = dqq_matcher.Match(node, onnx_model)
             if ret:
                 dq_node = dag['node']

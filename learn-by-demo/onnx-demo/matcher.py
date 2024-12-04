@@ -39,6 +39,16 @@ class DagMatcher:
             inputs.append(dag)
 
         return True, {
+            'id': self.pattern.get('id', -1),
             'node': node,
             'inputs': inputs
         }
+
+    def FindNode(self, dag, idnum):
+        if dag.get('id', -1) == idnum:
+            return dag['node']
+        for input in dag.get('inputs', []):
+            ret = self.FindNode(input, idnum)
+            if ret:
+                return ret
+        return None
