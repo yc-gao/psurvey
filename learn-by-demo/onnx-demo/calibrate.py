@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 import argparse
+import tempfile
 import os
 import glob
+from pathlib import Path
+
 
 import numpy as np
 from PIL import Image
+
+import onnx
 import onnxruntime as ort
-from onnxruntime.quantization import CalibrationDataReader
+from onnxruntime.quantization.registry import QLinearOpsRegistry, QDQRegistry
+from onnxruntime.quantization.quant_utils import QuantType
+from onnxruntime.quantization import CalibrationDataReader, CalibrationMethod, create_calibrator
+from onnxruntime.quantization.qdq_quantizer import QDQQuantizer
 
 
 class ImageNetDataReader(CalibrationDataReader):
@@ -38,15 +46,19 @@ class ImageNetDataReader(CalibrationDataReader):
         self.data_idx = self.data_idx + 1
         return self.load_batch(batch_filenames), [self.label2idx[os.path.dirname(x)] for x in batch_filenames]
 
-    def get_next(self):
+    def get_next(self, with_label=False):
         if self.data_idx >= len(self):
             return None
         batch_filenames = self.img_filenames[self.data_idx]
         self.data_idx = self.data_idx + 1
 
+        if with_label:
+            return {
+                'data': self.load_batch(batch_filenames),
+                '495': [self.label2idx[os.path.dirname(x)] for x in batch_filenames]
+            }
         return {
             'data': self.load_batch(batch_filenames),
-            '495': [self.label2idx[os.path.dirname(x)] for x in batch_filenames]
         }
 
     def rewind(self):
@@ -86,8 +98,9 @@ class ImageNetPipeline:
         correct_count = 0
         iname = sess.get_inputs()[0].name
         oname = sess.get_outputs()[0].name
+        data_reader.rewind()
         while True:
-            batch = data_reader.get_next()
+            batch = data_reader.get_next(True)
             if not batch:
                 break
             pred, = sess.run(None, {f"{iname}": batch[iname]})
@@ -95,6 +108,7 @@ class ImageNetPipeline:
 
             total_count = total_count + len(batch[oname])
             correct_count = correct_count + (pred == batch[oname]).sum()
+        data_reader.rewind()
         return correct_count / total_count
 
     @staticmethod
@@ -107,6 +121,7 @@ class ImageNetPipeline:
 
 def parse_options():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-w', '--workdir')
     parser.add_argument('--dataset-path', type=str)
     parser.add_argument('model')
     return parser.parse_args()
@@ -120,6 +135,58 @@ def main():
 
     acc = ImageNetPipeline.eval(sess, data_reader)
     print(f"acc: {acc * 100:.4f}%")
+    del sess
+
+    extra_options = {}
+    op_types_to_quantize = []
+    nodes_to_quantize = []
+    nodes_to_exclude = []
+    if not op_types_to_quantize:
+        q_linear_ops = list(QLinearOpsRegistry.keys())
+        qdq_ops = list(QDQRegistry.keys())
+        op_types_to_quantize = list(set(q_linear_ops + qdq_ops))
+    with tempfile.TemporaryDirectory() as workdir:
+        if options.workdir:
+            workdir = options.workdir
+        workdir = Path(workdir)
+        workdir.mkdir(parents=True, exist_ok=True)
+        model_path = Path(options.model)
+        inferred_model_path = workdir / \
+            (model_path.stem + "-inferred" + model_path.suffix)
+        onnx.shape_inference.infer_shapes_path(
+            model_path, inferred_model_path)
+        model = onnx.load(inferred_model_path)
+        calibrator = create_calibrator(
+            inferred_model_path,
+            op_types_to_quantize,
+            augmented_model_path=workdir/"augmented_model.onnx",
+            calibrate_method=CalibrationMethod.MinMax,
+        )
+        calibrator.collect_data(data_reader)
+        tensors_range = calibrator.compute_data()
+        del calibrator
+
+        quantizer = QDQQuantizer(
+            model,
+            False,
+            False,
+            QuantType.QInt8,
+            QuantType.QInt8,
+            tensors_range,
+            nodes_to_quantize,
+            nodes_to_exclude,
+            op_types_to_quantize,
+            extra_options
+        )
+        quantizer.quantize_model()
+        quantizer.model.save_model_to_file(workdir / 'quanzed_model.onnx')
+
+        sess = ort.InferenceSession(workdir / 'quanzed_model.onnx', providers=[
+            'CUDAExecutionProvider'])
+
+        acc = ImageNetPipeline.eval(sess, data_reader)
+        print(f"acc: {acc * 100:.4f}%")
+        del sess
 
 
 if __name__ == "__main__":
