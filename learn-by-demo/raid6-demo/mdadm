@@ -2,17 +2,22 @@
 set -ex
 
 opt_volumes=(
+    "/dev/loop0"
+    "/dev/loop1"
+    "/dev/loop2"
+    "/dev/loop3"
+    "/dev/loop4"
 )
 
 # create raid
 mdadm \
     --create /dev/md0 \
-    --level=6 \
+    --level=5 \
     --raid-devices="${#opt_volumes[@]}" \
     "${opt_volumes[@]}"
 
 # save mdadm config
-mdadm --detail --scan | tee -a /etc/mdadm/mdadm.conf
+mdadm --verbose --detail --scan | tee -a /etc/mdadm/mdadm.conf
 update-initramfs -u
 
 # remove raid
