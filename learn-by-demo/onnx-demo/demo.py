@@ -260,6 +260,17 @@ def main():
                 {'bitwidth': 16, 'dtype': 'float'}]
     final_activation_encodings.update(activation_encodings)
 
+    for input_name in unquanzed_model.input_names():
+        tmp = final_activation_encodings.get(input_name, None)
+        if tmp:
+            final_activation_encodings[input_name] = [
+                {
+                    'bitwidth': 16,
+                    'dtype': 'float',
+                    'scale': float(t['scale'] * 65280 / 255),
+                    'offset': int(t['offset'] * 255 / 65280),
+                } if t['dtype'] == 'float' else t for t in tmp]
+
     onnx_model.topological_sort()
     unquanzed_model.topological_sort()
     if options.output:
