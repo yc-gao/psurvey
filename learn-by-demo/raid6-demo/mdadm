@@ -2,12 +2,16 @@
 set -ex
 
 opt_volumes=(
-    "/dev/loop0"
-    "/dev/loop1"
-    "/dev/loop2"
-    "/dev/loop3"
-    "/dev/loop4"
+    "/dev/sdb1"
+    "/dev/sdc1"
+    "/dev/sdd1"
+    "/dev/sde1"
+    "/dev/sdf1"
 )
+opt_cvolume=/dev/nvme0n1p1
+opt_vg=mgroup
+opt_lv=mvol
+
 
 # create raid
 mdadm \
@@ -15,6 +19,15 @@ mdadm \
     --level=5 \
     --raid-devices="${#opt_volumes[@]}" \
     "${opt_volumes[@]}"
+
+pvcreate /dev/md0
+vgcreate "${opt_vg}" /dev/md0
+lvcreate -l 100%FREE -n "${opt_lv}" "${opt_vg}"
+
+pvcreate "${opt_cvolume}"
+vgextend "${opt_vg}" "${opt_cvolume}"
+lvcreate --type cache-pool -l 100%FREE -n cache_pool "${opt_vg}" "${opt_cvolume}"
+lvconvert --type cache --cachemode writethrough --cachepool "${opt_vg}/cache_pool" "${opt_vg}/${opt_lv}"
 
 # save mdadm config
 mdadm --verbose --detail --scan | tee -a /etc/mdadm/mdadm.conf
