@@ -35,7 +35,7 @@ class FakeResnetCalibrationDataReader(CalibrationDataReader):
 # https://github.com/onnx/models/blob/main/validated/vision/classification/resnet/model/resnet50-v2-7.onnx
 def parse_options():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--workdir')
+    parser.add_argument('-w', '--workdir')
     parser.add_argument('-o', '--output', type=str, default='output.onnx')
     parser.add_argument('-f', '--format', type=str,
                         default='qdq', choices=['qdq', 'qop'])
