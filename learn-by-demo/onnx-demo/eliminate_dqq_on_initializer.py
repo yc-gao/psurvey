@@ -16,7 +16,7 @@ dqq_matcher = DagMatcher({
 })
 
 
-class EliminateDqQ:
+class EliminateDqQOnInitializer:
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
         input_name_map = {}
