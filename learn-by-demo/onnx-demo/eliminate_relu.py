@@ -32,6 +32,8 @@ class EliminateRelu:
         dags = pattern.MatchAll(onnx_model)
         for dag in dags:
             relu = pattern.FindNode(dag, 3)
+            if len(onnx_model.get_nodes_by_input_name(relu.output[0])) > 1:
+                continue
             q_node = pattern.FindNode(dag, 2)
             dq_node = pattern.FindNode(dag, 1)
             scale = onnx.numpy_helper.to_array(

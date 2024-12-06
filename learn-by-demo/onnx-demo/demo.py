@@ -11,12 +11,14 @@ from onnxsim.onnx_simplifier import simplify
 
 from onnx_model import OnnxModel
 
+from matcher import DagMatcher
 from eliminate_constant import EliminateConstant
 from eliminate_cast import EliminateCast
 from eliminate_identity import EliminateIdentity
 from eliminate_qdq import EliminateQdq
 from eliminate_dqq_on_initializer import EliminateDqQOnInitializer
 from eliminate_relu import EliminateRelu
+from merge_gemm_bn import MergeGemmBN
 
 
 def parse_options():
@@ -71,6 +73,52 @@ def dag_format(dag):
     return dag
 
 
+def merge_conv_bn(onnx_model):
+    onnx_model.topological_sort()
+    # merge conv bn
+    onnx_model, ret = simplify(onnx_model.model)
+    assert ret
+    onnx_model = OnnxModel(onnx_model)
+    return onnx_model
+
+
+def remap_relu_flow(onnx_model):
+    pattern = DagMatcher({
+        'id': 1,
+        'op_type': 'DequantizeLinear',
+        'inputs': [
+            {
+                'id': 2,
+                'op_type': 'QuantizeLinear',
+                'inputs': [
+                    {
+                        'id': 3,
+                        'op_type': 'Relu'
+                    }
+                ]
+            }
+        ]
+    })
+    input_name_map = {}
+    dags = pattern.MatchAll(onnx_model)
+    for dag in dags:
+        relu = pattern.FindNode(dag, 3)
+        dq = pattern.FindNode(dag, 1)
+        input_name_map[relu.output[0]] = dq.output[0]
+
+    for node in onnx_model.nodes():
+        if node.op_type in ('QuantizeLinear', 'DequantizeLinear'):
+            continue
+        for idx, input_name in enumerate(node.input):
+            new_input_name = input_name_map.get(input_name, None)
+            if new_input_name:
+                node.input[idx] = new_input_name
+
+    onnx_model.remove_unused()
+    onnx_model.ReInit()
+    return onnx_model
+
+
 def main():
     options = parse_options()
 
@@ -79,12 +127,10 @@ def main():
     onnx_model = EliminateIdentity.apply(onnx_model)
     onnx_model = EliminateConstant.apply(onnx_model)
     onnx_model = EliminateDqQOnInitializer.apply(onnx_model)
+    onnx_model = MergeGemmBN.apply(onnx_model)
+    onnx_model = merge_conv_bn(onnx_model)
+    onnx_model = remap_relu_flow(onnx_model)
     onnx_model = EliminateRelu.apply(onnx_model)
-
-    onnx_model.topological_sort()
-    onnx_model, ret = simplify(onnx_model.model)
-    assert ret
-    onnx_model = OnnxModel(onnx_model)
 
     unquanzed_model = EliminateQdq.apply(onnx_model.clone())
 
@@ -93,7 +139,7 @@ def main():
     if options.output:
         output = Path(options.output)
         output.mkdir(parents=True, exist_ok=True)
-        onnx_model.save(output/'model.onnx')
+        onnx_model.save(output/'model.qdq.onnx')
         unquanzed_model.save(output/'model.unquanzed.onnx')
 
 
