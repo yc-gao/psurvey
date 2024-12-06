@@ -44,6 +44,29 @@ class DagMatcher:
             'inputs': inputs
         }
 
+    def MatchAll(self, vistor: ModelVistor):
+        dags = []
+        node_matched = set()
+        for node in reversed(vistor.nodes()):
+            if node.name in node_matched:
+                continue
+            ret, dag = self.Match(node, vistor)
+            if not ret:
+                continue
+            if any([node.name in node_matched for node in self.GetNodes(dag)]):
+                continue
+            dags.append(dag)
+
+        return dags
+
+    def GetNodes(self, dag):
+        nodes = []
+        if 'node' in dag:
+            nodes.append(dag['node'])
+        for input in dag.get('inputs', []):
+            nodes.extend(self.GetNodes(input))
+        return nodes
+
     def FindNode(self, dag, idnum):
         if dag.get('id', -1) == idnum:
             return dag['node']
