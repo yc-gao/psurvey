@@ -7,112 +7,16 @@ import copy
 
 import numpy as np
 import onnx
+from onnxsim.onnx_simplifier import simplify
 
 from onnx_model import OnnxModel
-from matcher import DagMatcher
 
 from eliminate_constant import EliminateConstant
 from eliminate_cast import EliminateCast
 from eliminate_identity import EliminateIdentity
 from eliminate_qdq import EliminateQdq
-
-quanzed_gemm_relu_pattern = DagMatcher({
-    'id': 0,
-    'op_type': 'QuantizeLinear',
-    'inputs': [
-        {
-            'id': 1,
-            'op_type': 'Relu',
-            'inputs': [
-                {
-                    'id': 2,
-                    'op_type': 'Gemm',
-                    'inputs': [
-                        {
-                            'id': 3,
-                            'op_type': 'DequantizeLinear'
-                        },
-                        {
-                            'id': 4,
-                            'op_type': 'DequantizeLinear'
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
-})
-quanzed_gemm_bn_relu_pattern = DagMatcher({
-    'id': 0,
-    'op_type': 'QuantizeLinear',
-    'inputs': [
-        {
-            'id': 1,
-            'op_type': 'Relu',
-            'inputs': [
-                {
-                    'id': 2,
-                    'op_type': 'BatchNormalization',
-                    'inputs': [
-                        {
-                            'id': 3,
-                            'op_type': 'Gemm',
-                            'inputs': [
-                                {
-                                    'id': 4,
-                                    'op_type': 'DequantizeLinear'
-                                },
-                                {
-                                    'id': 5,
-                                    'op_type': 'DequantizeLinear'
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
-})
-quanzed_conv_bn_relu_pattern = DagMatcher({
-    'id': 0,
-    'op_type': 'QuantizeLinear',
-    'inputs': [
-        {
-            'id': 1,
-            'op_type': 'Relu',
-            'inputs': [
-                {
-                    'id': 2,
-                    'op_type': 'BatchNormalization',
-                    'inputs': [
-                        {
-                            'id': 3,
-                            'op_type': 'Conv',
-                            'inputs': [
-                                {
-                                    'id': 4,
-                                    'op_type': 'DequantizeLinear'
-                                },
-                                {
-                                    'id': 5,
-                                    'op_type': 'DequantizeLinear'
-                                }
-                            ]
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
-})
-
-
-def unique_count(items: list) -> dict:
-    tmp = {}
-    for item in items:
-        tmp[item] = tmp.get(item, 0) + 1
-    return tmp
+from eliminate_dqq_on_initializer import EliminateDqQOnInitializer
+from eliminate_relu import EliminateRelu
 
 
 def parse_options():
@@ -170,106 +74,19 @@ def dag_format(dag):
 def main():
     options = parse_options()
 
-    activation_encodings = {}
-
-    encodings_unset = set()
-
     onnx_model = OnnxModel(options.model)
     onnx_model = EliminateCast.apply(onnx_model)
     onnx_model = EliminateIdentity.apply(onnx_model)
     onnx_model = EliminateConstant.apply(onnx_model)
+    onnx_model = EliminateDqQOnInitializer.apply(onnx_model)
+    onnx_model = EliminateRelu.apply(onnx_model)
+
+    onnx_model.topological_sort()
+    onnx_model, ret = simplify(onnx_model.model)
+    assert ret
+    onnx_model = OnnxModel(onnx_model)
 
     unquanzed_model = EliminateQdq.apply(onnx_model.clone())
-
-    for node in reversed(onnx_model.nodes()):
-        ret, dag = quanzed_gemm_relu_pattern.Match(node, onnx_model)
-        if ret:
-            q_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 0)
-            relu_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 1)
-            gemm_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 2)
-            dq_node0 = quanzed_gemm_bn_relu_pattern.FindNode(dag, 3)
-            dq_node1 = quanzed_gemm_bn_relu_pattern.FindNode(dag, 4)
-
-            encodings_unset.update(relu_node.output)
-            encodings_unset.update(gemm_node.output)
-
-            unquanzed_gemm_node = unquanzed_model.get_node_by_name(
-                gemm_node.name)
-            activation_encodings[unquanzed_gemm_node.input[0]
-                                 ] = qdqnode_to_dict(dq_node0, onnx_model, 'fp16')
-
-            unquanzed_relu_node = unquanzed_model.get_node_by_name(
-                relu_node.name)
-            activation_encodings[unquanzed_relu_node.output[0]] = qdqnode_to_dict(
-                q_node, onnx_model, 'int8')
-            continue
-        ret, dag = quanzed_gemm_bn_relu_pattern.Match(node, onnx_model)
-        if ret:
-            q_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 0)
-            relu_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 1)
-            bn_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 2)
-            gemm_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 3)
-            dq_node0 = quanzed_gemm_bn_relu_pattern.FindNode(dag, 4)
-            dq_node1 = quanzed_gemm_bn_relu_pattern.FindNode(dag, 5)
-
-            encodings_unset.update(relu_node.output)
-            encodings_unset.update(bn_node.output)
-            encodings_unset.update(gemm_node.output)
-
-            unquanzed_gemm_node = unquanzed_model.get_node_by_name(
-                gemm_node.name)
-            activation_encodings[unquanzed_gemm_node.input[0]
-                                 ] = qdqnode_to_dict(dq_node0, onnx_model, 'fp16')
-
-            unquanzed_relu_node = unquanzed_model.get_node_by_name(
-                relu_node.name)
-            activation_encodings[unquanzed_relu_node.output[0]] = qdqnode_to_dict(
-                q_node, onnx_model, 'int8')
-            continue
-        ret, dag = quanzed_conv_bn_relu_pattern.Match(node, onnx_model)
-        if ret:
-            q_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 0)
-            relu_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 1)
-            bn_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 2)
-            conv_node = quanzed_gemm_bn_relu_pattern.FindNode(dag, 3)
-            dq_node0 = quanzed_gemm_bn_relu_pattern.FindNode(dag, 4)
-            dq_node1 = quanzed_gemm_bn_relu_pattern.FindNode(dag, 5)
-
-            encodings_unset.update(relu_node.output)
-            encodings_unset.update(bn_node.output)
-            encodings_unset.update(conv_node.output)
-
-            unquanzed_conv_node = unquanzed_model.get_node_by_name(
-                conv_node.name)
-
-            activation_encodings[unquanzed_conv_node.input[0]
-                                 ] = qdqnode_to_dict(dq_node0, onnx_model, 'fp16')
-
-            unquanzed_relu_node = unquanzed_model.get_node_by_name(
-                relu_node.name)
-            activation_encodings[unquanzed_relu_node.output[0]] = qdqnode_to_dict(
-                q_node, onnx_model, 'int8')
-            continue
-
-    final_activation_encodings = {}
-    for node in unquanzed_model.nodes():
-        for output in node.output:
-            if output in encodings_unset:
-                continue
-            final_activation_encodings[output] = [
-                {'bitwidth': 16, 'dtype': 'float'}]
-    final_activation_encodings.update(activation_encodings)
-
-    for input_name in unquanzed_model.input_names():
-        tmp = final_activation_encodings.get(input_name, None)
-        if tmp:
-            final_activation_encodings[input_name] = [
-                {
-                    'bitwidth': 16,
-                    'dtype': 'float',
-                    'scale': float(t['scale'] * 65280 / 255),
-                    'offset': int(t['offset'] * 255 / 65280),
-                } if t['dtype'] == 'float' else t for t in tmp]
 
     onnx_model.topological_sort()
     unquanzed_model.topological_sort()
@@ -278,11 +95,6 @@ def main():
         output.mkdir(parents=True, exist_ok=True)
         onnx_model.save(output/'model.onnx')
         unquanzed_model.save(output/'model.unquanzed.onnx')
-        with open(output/'encodings.json', 'w') as f:
-            json.dump({
-                'activation_encodings': final_activation_encodings,
-                'param_encodings': [],
-            }, f)
 
 
 if __name__ == "__main__":
