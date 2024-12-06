@@ -9,8 +9,8 @@ opt_volumes=(
     "/dev/sdf1"
 )
 opt_cvolume=/dev/nvme0n1p1
-opt_vg=mgroup
-opt_lv=mvol
+opt_vg=raid6_group
+opt_lv=raid6_vol
 
 
 # create raid
