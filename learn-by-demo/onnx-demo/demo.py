@@ -119,6 +119,38 @@ def remap_relu_flow(onnx_model):
     return onnx_model
 
 
+def merge_qdq_on_same(onnx_model):
+    pattern = DagMatcher({
+        'id': 1,
+        'op_type': 'DequantizeLinear',
+        'inputs': [
+            {
+                'id': 2,
+                'op_type': 'QuantizeLinear',
+            }
+        ]
+    })
+    union_set = {}
+    dags = pattern.MatchAll(onnx_model)
+    for dag in dags:
+        q_node = pattern.FindNode(dag, 1)
+        dq_node = pattern.FindNode(dag, 2)
+        if dq_node.input[0] not in union_set:
+            union_set[dq_node.input[0]] = [(q_node, dq_node)]
+        else:
+            union_set[dq_node.input[0]].append((q_node, dq_node))
+    input_name_map = {}
+    for _, v in union_set.items():
+        if len(v) > 1:
+            for qdq_pair in v[1:]:
+                input_name_map[qdq_pair[1].output[0]] = v[0][1].output[0]
+
+    onnx_model.remap_input_names(input_name_map)
+    onnx_model.remove_unused()
+    onnx_model.ReInit()
+    return onnx_model
+
+
 def main():
     options = parse_options()
 
@@ -128,6 +160,7 @@ def main():
     onnx_model = EliminateConstant.apply(onnx_model)
     onnx_model = EliminateDqQOnInitializer.apply(onnx_model)
 
+    onnx_model = merge_qdq_on_same(onnx_model)
     onnx_model = remap_relu_flow(onnx_model)
     onnx_model = EliminateRelu.apply(onnx_model)
 
