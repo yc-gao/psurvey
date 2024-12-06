@@ -76,7 +76,7 @@ def dag_format(dag):
 def merge_conv_bn(onnx_model):
     onnx_model.topological_sort()
     # merge conv bn
-    onnx_model, ret = simplify(onnx_model.model)
+    onnx_model, ret = simplify(onnx_model.model, perform_optimization=False)
     assert ret
     onnx_model = OnnxModel(onnx_model)
     return onnx_model
@@ -277,7 +277,7 @@ def main():
         unquanzed_model.save(output/'model.unquanzed.onnx')
         with open(output/'encodings.json', 'w') as f:
             json.dump({'activation_encodings': activation_encodings,
-                      'param_encodings': []}, f)
+                      'param_encodings': {}}, f)
 
 
 if __name__ == "__main__":
