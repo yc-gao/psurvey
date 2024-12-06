@@ -151,6 +151,74 @@ def merge_qdq_on_same(onnx_model):
     return onnx_model
 
 
+def qnode_to_encodings(onnx_model, q_node, dtype='int8'):
+    scale = onnx.numpy_helper.to_array(
+        onnx_model.get_initializer_by_name(q_node.input[1]))
+    zero_point = onnx.numpy_helper.to_array(
+        onnx_model.get_initializer_by_name(q_node.input[2]))
+    assert scale.shape == zero_point.shape
+
+    elem_count = functools.reduce(lambda a, b: a * b, scale.shape, 1)
+
+    scale = np.reshape(scale, (elem_count, ))
+    zero_point = np.reshape(zero_point, (elem_count, )).astype(np.float32)
+
+    if dtype == 'int8':
+        return [
+            {
+                'bitwidth': 8,
+                'dtype': 'int',
+                'offset': int(z),
+                'scale': float(s)
+            } for s, z in zip(scale, zero_point)
+        ]
+
+    zero_point = zero_point * 65280 / 255
+    scale = scale * 255 / 65280
+    return [
+        {
+            'bitwidth': 16,
+            'dtype': 'float',
+            'offset': int(z),
+            'scale': float(s)
+        } for s, z in zip(scale, zero_point)
+    ]
+
+
+q_conv_dq_pattern = DagMatcher({
+    'id': 1,
+    'op_type': 'QuantizeLinear',
+    'inputs': [
+        {
+            'id': 2,
+            'op_type': 'Conv',
+            'inputs': [
+                {
+                    'id': 3,
+                    'op_type': 'DequantizeLinear'
+                }
+            ]
+        }
+    ]
+})
+q_gemm_dq_pattern = DagMatcher({
+    'id': 1,
+    'op_type': 'QuantizeLinear',
+    'inputs': [
+        {
+            'id': 2,
+            'op_type': 'Gemm',
+            'inputs': [
+                {
+                    'id': 3,
+                    'op_type': 'DequantizeLinear'
+                }
+            ]
+        }
+    ]
+})
+
+
 def main():
     options = parse_options()
 
@@ -169,6 +237,37 @@ def main():
 
     unquanzed_model = EliminateQdq.apply(onnx_model.clone())
 
+    activation_encodings = {}
+    for dag in q_conv_dq_pattern.MatchAll(onnx_model):
+        q_node = q_conv_dq_pattern.FindNode(dag, 1)
+        conv_node = q_conv_dq_pattern.FindNode(dag, 2)
+        dq_node = q_conv_dq_pattern.FindNode(dag, 3)
+        unquanzed_conv = unquanzed_model.get_node_by_name(conv_node.name)
+
+        activation_encodings[unquanzed_conv.output[0]
+                             ] = qnode_to_encodings(onnx_model, q_node)
+        activation_encodings[unquanzed_conv.input[0]
+                             ] = qnode_to_encodings(onnx_model, dq_node, 'float16')
+
+    for dag in q_gemm_dq_pattern.MatchAll(onnx_model):
+        q_node = q_conv_dq_pattern.FindNode(dag, 1)
+        gemm_node = q_conv_dq_pattern.FindNode(dag, 2)
+        dq_node = q_conv_dq_pattern.FindNode(dag, 3)
+        unquanzed_gemm = unquanzed_model.get_node_by_name(gemm_node.name)
+
+        activation_encodings[unquanzed_gemm.output[0]
+                             ] = qnode_to_encodings(onnx_model, q_node)
+        activation_encodings[unquanzed_gemm.input[0]
+                             ] = qnode_to_encodings(onnx_model, dq_node, 'float16')
+
+    for node in unquanzed_model.nodes():
+        for output in node.output:
+            if output not in activation_encodings:
+                activation_encodings[output] = [{
+                    'bitwidth': 16,
+                    'dtype': 'float',
+                }]
+
     onnx_model.topological_sort()
     unquanzed_model.topological_sort()
     if options.output:
@@ -176,6 +275,9 @@ def main():
         output.mkdir(parents=True, exist_ok=True)
         onnx_model.save(output/'model.qdq.onnx')
         unquanzed_model.save(output/'model.unquanzed.onnx')
+        with open(output/'encodings.json', 'w') as f:
+            json.dump({'activation_encodings': activation_encodings,
+                      'param_encodings': []}, f)
 
 
 if __name__ == "__main__":
