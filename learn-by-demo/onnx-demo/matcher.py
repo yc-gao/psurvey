@@ -55,6 +55,7 @@ class DagMatcher:
                 continue
             if any([node.name in node_matched for node in self.GetNodes(dag)]):
                 continue
+            node_matched.update([node.name for node in self.GetNodes(dag)])
             dags.append(dag)
 
         return dags
