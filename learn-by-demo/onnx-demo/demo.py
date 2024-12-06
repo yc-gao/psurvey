@@ -127,10 +127,12 @@ def main():
     onnx_model = EliminateIdentity.apply(onnx_model)
     onnx_model = EliminateConstant.apply(onnx_model)
     onnx_model = EliminateDqQOnInitializer.apply(onnx_model)
-    onnx_model = MergeGemmBN.apply(onnx_model)
-    onnx_model = merge_conv_bn(onnx_model)
+
     onnx_model = remap_relu_flow(onnx_model)
     onnx_model = EliminateRelu.apply(onnx_model)
+
+    onnx_model = MergeGemmBN.apply(onnx_model)
+    onnx_model = merge_conv_bn(onnx_model)
 
     unquanzed_model = EliminateQdq.apply(onnx_model.clone())
 

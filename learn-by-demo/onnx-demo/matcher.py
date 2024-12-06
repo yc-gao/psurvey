@@ -11,8 +11,11 @@ class NodeMatcher:
         if not node:
             return False
         for prop in self.properties:
-            if prop in self.pattern and getattr(node, prop) != self.pattern[prop]:
-                return False
+            if prop in self.pattern:
+                if isinstance(self.pattern[prop], str) and getattr(node, prop) != self.pattern[prop]:
+                    return False
+                elif not self.pattern[prop].Match(getattr(node, prop)):
+                    return False
         return True
 
 
