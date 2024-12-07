@@ -16,10 +16,19 @@ opt_lv=raid6_vol
 # create raid
 mdadm \
     --create /dev/md0 \
-    --level=5 \
+    --level=6 \
     --raid-devices="${#opt_volumes[@]}" \
     "${opt_volumes[@]}"
 
+# save mdadm config
+mdadm --verbose --detail --scan | tee -a /etc/mdadm/mdadm.conf
+update-initramfs -u
+
+# remove raid
+mdadm --stop /dev/md0
+mdadm --zero-superblock "${opt_volumes[@]}"
+
+# lvm and cache
 pvcreate /dev/md0
 vgcreate "${opt_vg}" /dev/md0
 lvcreate -l 100%FREE -n "${opt_lv}" "${opt_vg}"
@@ -29,10 +38,5 @@ vgextend "${opt_vg}" "${opt_cvolume}"
 lvcreate --type cache-pool -l 100%FREE -n cache_pool "${opt_vg}" "${opt_cvolume}"
 lvconvert --type cache --cachemode writethrough --cachepool "${opt_vg}/cache_pool" "${opt_vg}/${opt_lv}"
 
-# save mdadm config
-mdadm --verbose --detail --scan | tee -a /etc/mdadm/mdadm.conf
-update-initramfs -u
+mkfs.ext4 "/dev/${opt_vg}/${opt_lv}"
 
-# remove raid
-mdadm --stop /dev/md0
-mdadm --zero-superblock "${opt_volumes[@]}"
