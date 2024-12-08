@@ -119,7 +119,7 @@ def remap_relu_flow(onnx_model):
     return onnx_model
 
 
-def merge_qdq_on_same(onnx_model):
+def merge_dqq_on_same(onnx_model):
     pattern = DagMatcher({
         'id': 1,
         'op_type': 'DequantizeLinear',
@@ -228,14 +228,12 @@ def main():
     onnx_model = EliminateConstant.apply(onnx_model)
     onnx_model = EliminateDqQOnInitializer.apply(onnx_model)
 
-    onnx_model = merge_qdq_on_same(onnx_model)
+    onnx_model = merge_dqq_on_same(onnx_model)
     onnx_model = remap_relu_flow(onnx_model)
     onnx_model = EliminateRelu.apply(onnx_model)
 
     onnx_model = MergeGemmBN.apply(onnx_model)
     onnx_model = merge_conv_bn(onnx_model)
-
-    unquanzed_model = EliminateQdq.apply(onnx_model.clone())
 
     activation_encodings = {}
     for dag in q_conv_dq_pattern.MatchAll(onnx_model):
@@ -246,8 +244,9 @@ def main():
 
         activation_encodings[unquanzed_conv.output[0]
                              ] = qnode_to_encodings(onnx_model, q_node)
-        activation_encodings[unquanzed_conv.input[0]
-                             ] = qnode_to_encodings(onnx_model, dq_node, 'float16')
+        if unquanzed_conv.input[0] not in activation_encodings:
+            activation_encodings[unquanzed_conv.input[0]
+                                 ] = qnode_to_encodings(onnx_model, dq_node, 'float16')
 
     for dag in q_gemm_dq_pattern.MatchAll(onnx_model):
         q_node = q_conv_dq_pattern.FindNode(dag, 1)
@@ -257,8 +256,9 @@ def main():
 
         activation_encodings[unquanzed_gemm.output[0]
                              ] = qnode_to_encodings(onnx_model, q_node)
-        activation_encodings[unquanzed_gemm.input[0]
-                             ] = qnode_to_encodings(onnx_model, dq_node, 'float16')
+        if unquanzed_gemm.input[0] not in activation_encodings:
+            activation_encodings[unquanzed_gemm.input[0]
+                                 ] = qnode_to_encodings(onnx_model, dq_node, 'float16')
 
     for node in unquanzed_model.nodes():
         for output in node.output:
@@ -269,6 +269,7 @@ def main():
                 }]
 
     onnx_model.topological_sort()
+    unquanzed_model = EliminateQdq.apply(onnx_model.clone())
     unquanzed_model.topological_sort()
     if options.output:
         output = Path(options.output)
