@@ -20,8 +20,40 @@ def parse_options():
     return parser.parse_args()
 
 
+def do_prepare_fx(model_fp32, qconfig_mapping, example_inputs):
+    # TODO: figure out
+    from torch.ao.quantization.fx.custom_config import PrepareCustomConfig
+    from torch.ao.quantization.qconfig_mapping import QConfigMapping
+
+    from torch.ao.quantization.fx.prepare import prepare
+    from torch.ao.quantization.fx.tracer import QuantizationTracer
+    from torch.fx.graph_module import GraphModule
+
+    prepare_custom_config = PrepareCustomConfig()
+    equalization_config = QConfigMapping()
+
+    tracer = QuantizationTracer([], [])
+    graph_module = GraphModule(model_fp32, tracer.trace(model_fp32))
+    for node in graph_module.graph.nodes:
+        if not hasattr(node, "meta"):
+            node.meta = {}
+    prepared = prepare(
+        graph_module,
+        qconfig_mapping,
+        False,
+        tracer.node_name_to_scope,
+        example_inputs=example_inputs,
+        prepare_custom_config=prepare_custom_config,
+        _equalization_config=equalization_config,
+        backend_config=None,
+        is_standalone_module=False,
+    )
+    return prepared
+
+
 def do_ptq(model_fp32, dataloader, example_inputs):
     qconfig_mapping = get_default_qconfig_mapping()
+    # model_prepared = do_prepare_fx(model_fp32, qconfig_mapping, example_inputs)
     model_prepared = prepare_fx(model_fp32, qconfig_mapping, example_inputs)
 
     ImageNetPipeline.calibrate(model_prepared, dataloader)
@@ -56,8 +88,8 @@ def main():
     acc = ImageNetPipeline.eval(model_fp32, dataloader)
     print(f'origin model, acc: {acc * 100:.4f}%')
 
-    # model_converted = do_ptq(model_fp32, dataloader, example_inputs)
-    model_converted = do_qat(model_fp32, dataloader, example_inputs)
+    model_converted = do_ptq(model_fp32, dataloader, example_inputs)
+    # model_converted = do_qat(model_fp32, dataloader, example_inputs)
     acc = ImageNetPipeline.eval(model_converted, dataloader)
     print(f'converted model, acc: {acc * 100:.4f}%')
 
