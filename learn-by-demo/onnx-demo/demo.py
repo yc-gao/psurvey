@@ -235,6 +235,8 @@ def main():
     onnx_model = MergeGemmBN.apply(onnx_model)
     onnx_model = merge_conv_bn(onnx_model)
 
+    unquanzed_model = EliminateQdq.apply(onnx_model.clone())
+
     activation_encodings = {}
     for dag in q_conv_dq_pattern.MatchAll(onnx_model):
         q_node = q_conv_dq_pattern.FindNode(dag, 1)
@@ -269,7 +271,6 @@ def main():
                 }]
 
     onnx_model.topological_sort()
-    unquanzed_model = EliminateQdq.apply(onnx_model.clone())
     unquanzed_model.topological_sort()
     if options.output:
         output = Path(options.output)
