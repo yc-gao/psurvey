@@ -28,6 +28,10 @@ class transform_iterator:
 
 class ImageNetPipeline:
     @staticmethod
+    def get_example_inputs():
+        return (torch.randn(1, 3, 224, 224),)
+
+    @staticmethod
     def get_dataloader(root_dir, batch_size=64, image_size=224):
         dataset = datasets.ImageFolder(root_dir, transforms.Compose([
             transforms.Resize(image_size + 24),
@@ -68,7 +72,7 @@ class ImageNetPipeline:
 
                 total_count = total_count + data.shape[0]
                 total_correct = total_correct + correct
-        return total_correct * 1.0 / total_count, total_count, total_correct
+        return total_correct * 1.0 / total_count
 
     @staticmethod
     def calibrate(model, dataloader):
