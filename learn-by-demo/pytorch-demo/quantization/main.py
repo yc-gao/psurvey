@@ -20,11 +20,13 @@ def parse_options():
     return parser.parse_args()
 
 
-def do_prepare_fx(model_fp32, qconfig_mapping, example_inputs):
+def do_prepare_fx(model_fp32, qconfig_mapping, example_inputs, is_qat=False):
     # TODO: figure out
     from torch.ao.quantization.fx.custom_config import PrepareCustomConfig
     from torch.ao.quantization.qconfig_mapping import QConfigMapping
 
+    from torch.ao.quantization.fx.custom_config import FuseCustomConfig
+    from torch.ao.quantization.fx.fuse import fuse
     from torch.ao.quantization.fx.prepare import prepare
     from torch.ao.quantization.fx.tracer import QuantizationTracer
     from torch.fx.graph_module import GraphModule
@@ -37,10 +39,15 @@ def do_prepare_fx(model_fp32, qconfig_mapping, example_inputs):
     for node in graph_module.graph.nodes:
         if not hasattr(node, "meta"):
             node.meta = {}
+
+    fuse_custom_config = FuseCustomConfig()
+    graph_module = fuse(graph_module, is_qat,
+                        fuse_custom_config, None)
+
     prepared = prepare(
         graph_module,
         qconfig_mapping,
-        False,
+        is_qat,
         tracer.node_name_to_scope,
         example_inputs=example_inputs,
         prepare_custom_config=prepare_custom_config,
@@ -53,8 +60,8 @@ def do_prepare_fx(model_fp32, qconfig_mapping, example_inputs):
 
 def do_ptq(model_fp32, dataloader, example_inputs):
     qconfig_mapping = get_default_qconfig_mapping()
-    # model_prepared = do_prepare_fx(model_fp32, qconfig_mapping, example_inputs)
-    model_prepared = prepare_fx(model_fp32, qconfig_mapping, example_inputs)
+    model_prepared = do_prepare_fx(model_fp32, qconfig_mapping, example_inputs)
+    # model_prepared = prepare_fx(model_fp32, qconfig_mapping, example_inputs)
 
     ImageNetPipeline.calibrate(model_prepared, dataloader)
     model_converted = convert_fx(model_prepared)
