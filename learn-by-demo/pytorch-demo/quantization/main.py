@@ -70,8 +70,9 @@ def do_ptq(model_fp32, dataloader, example_inputs):
 
 def do_qat(model_fp32, dataloader, example_inputs):
     qconfig_mapping = get_default_qat_qconfig_mapping()
-    model_prepared = prepare_qat_fx(
-        model_fp32, qconfig_mapping, example_inputs)
+    model_prepared = do_prepare_fx(model_fp32, qconfig_mapping, example_inputs, True)
+    # model_prepared = prepare_qat_fx(
+    #     model_fp32, qconfig_mapping, example_inputs)
 
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model_prepared.parameters(), lr=1e-3)
@@ -95,8 +96,8 @@ def main():
     acc = ImageNetPipeline.eval(model_fp32, dataloader)
     print(f'origin model, acc: {acc * 100:.4f}%')
 
-    model_converted = do_ptq(model_fp32, dataloader, example_inputs)
-    # model_converted = do_qat(model_fp32, dataloader, example_inputs)
+    # model_converted = do_ptq(model_fp32, dataloader, example_inputs)
+    model_converted = do_qat(model_fp32, dataloader, example_inputs)
     acc = ImageNetPipeline.eval(model_converted, dataloader)
     print(f'converted model, acc: {acc * 100:.4f}%')
 
