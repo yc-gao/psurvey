@@ -41,7 +41,9 @@ class DagMatcher:
         if 'inputs' not in self.pattern:
             return True, {'id': self.pattern.get('id', -1), 'node': node}
         ipattern = self.pattern['inputs']
-        if (ipattern and not node) or len(node.input) != len(ipattern):
+        if ipattern and not node:
+            return False, None
+        if len(node.input) != len(ipattern):
             return False, None
         inputs = []
         for p, n in zip(ipattern, node.input):
