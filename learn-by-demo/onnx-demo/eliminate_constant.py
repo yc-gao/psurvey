@@ -16,5 +16,4 @@ class EliminateConstant:
 
         onnx_model.add_initializers(initializer_added)
         onnx_model.remove_nodes(constant_removed)
-        onnx_model.ReInit()
-        return onnx_model
+        return OnnxModel(onnx_model.model())

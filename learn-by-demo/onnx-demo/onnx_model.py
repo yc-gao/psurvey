@@ -29,6 +29,15 @@ class OnnxModel:
         self.initializer_name_to_initializer = {
             x.name: x for x in self._proto.graph.initializer
         }
+        self.name_to_vinfo = {
+            x.name: x for x in self._proto.graph.value_info
+        }
+        self.name_to_vinfo.update({
+            x.name: x for x in self._proto.graph.input
+        })
+        self.name_to_vinfo.update({
+            x.name: x for x in self._proto.graph.output
+        })
 
     def save(self, fpath):
         if isinstance(fpath, os.PathLike):
@@ -65,6 +74,12 @@ class OnnxModel:
     def output_names(self):
         return [x.name for x in self.outputs()]
 
+    def add_output(self, output):
+        self.add_outputs([output])
+
+    def add_outputs(self, outputs):
+        self.graph().output.extend(outputs)
+
     def remove_output(self, output):
         self.remove_outputs([output])
 
@@ -75,6 +90,12 @@ class OnnxModel:
     def initializers(self):
         return [x for x in self.graph().initializer]
 
+    def add_initializer(self, x):
+        self.add_initializers([x])
+
+    def add_initializers(self, initializers):
+        self.graph().initializer.extend(initializers)
+
     def remove_initializer(self, initializer):
         self.remove_initializers([initializer])
 
@@ -84,6 +105,9 @@ class OnnxModel:
 
     def vinfos(self):
         return [x for x in self.graph().value_info]
+
+    def get_vinfo_by_name(self, name):
+        return self.name_to_vinfo.get(name)
 
     def remove_vinfo(self, vinfo):
         self.remove_vinfos([vinfo])
