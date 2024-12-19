@@ -9,5 +9,4 @@ class EliminateIdentity:
             input_name_map[node.output[0]] = node.input[0]
         onnx_model.remap_input_names(input_name_map)
         onnx_model.remove_unused()
-        onnx_model.ReInit()
-        return onnx_model
+        return OnnxModel(onnx_model.model())

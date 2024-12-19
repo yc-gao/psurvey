@@ -40,6 +40,9 @@ class OnnxModel:
         t.CopyFrom(self._proto)
         return OnnxModel(t)
 
+    def model(self):
+        return self._proto
+
     def graph(self):
         return self._proto.graph
 
@@ -94,6 +97,9 @@ class OnnxModel:
 
     def get_node_by_output_name(self, name):
         return self.output_name_to_node.get(name, None)
+
+    def get_nodes_by_optype(self, optype):
+        return [x for x in self.nodes() if x.op_type == optype]
 
     def remove_node(self, node):
         self.remove_nodes([node])
