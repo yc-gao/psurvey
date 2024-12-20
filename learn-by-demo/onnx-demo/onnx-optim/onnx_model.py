@@ -58,6 +58,9 @@ class OnnxModel:
     def input_names(self):
         return [x.name for x in self.inputs()]
 
+    def get_input_by_name(self, name):
+        return self.name_to_input.get(name, None)
+
     def add_input(self, input):
         self.add_inputs([input])
 
@@ -78,6 +81,9 @@ class OnnxModel:
     def output_names(self):
         return [x.name for x in self.outputs()]
 
+    def get_output_by_name(self, name):
+        return self.name_to_output.get(name, None)
+
     def add_output(self, output):
         self.add_outputs([output])
 
@@ -97,11 +103,11 @@ class OnnxModel:
     def initializers(self):
         return [x for x in self.graph().initializer]
 
-    def get_initializer_by_name(self, name):
-        return self.name_to_initializer.get(name, None)
-
     def initializer_names(self):
         return [x.name for x in self.initializers()]
+
+    def get_initializer_by_name(self, name):
+        return self.name_to_initializer.get(name, None)
 
     def add_initializer(self, initializer):
         self.add_initializers([initializer])
@@ -177,43 +183,6 @@ class OnnxModel:
         self.graph().ClearField("node")
         self.graph().node.extend(sorted_nodes)
 
-    def remove_unused(self, input=True, initializer=True, node=True):
-        input_visited = set()
-        initializer_visited = set()
-        node_visited = set()
-        vinfo_visited = set()
-
-        def dfs(node):
-            if node is None:
-                return
-            if node.name in node_visited:
-                return
-            node_visited.add(node.name)
-
-            vinfo_visited.update(node.output)
-            for input_name in node.input:
-                if input_name in self.name_to_input:
-                    input_visited.add(input_name)
-                elif input_name in self.name_to_initializer:
-                    initializer_visited.add(input_name)
-                else:
-                    dfs(self.output_name_to_node.get(input_name, None))
-
-        for output_name in self.output_names():
-            dfs(self.output_name_to_node.get(output_name, None))
-
-        if input:
-            self.remove_inputs(
-                [i for i in self.inputs() if i.name not in input_visited])
-        if initializer:
-            self.remove_initializers(
-                [i for i in self.initializers() if i.name not in initializer_visited])
-        if node:
-            self.remove_nodes([node for node in self.nodes()
-                              if node.name not in node_visited])
-            self.remove_vinfos(
-                [i for i in self.vinfos() if i.name not in vinfo_visited])
-
     def remap_input_names(self, input_name_map):
         for node in self.nodes():
             for idx, input_name in enumerate(node.input):
@@ -224,3 +193,9 @@ class OnnxModel:
     def extract(self, input_names: list[str], output_names: list[str]):
         e = Extractor(self.model())
         return OnnxModel(e.extract_model(input_names, output_names))
+
+    def remove_unused(self):
+        return self.extract(
+            [x.name for x in self.graph().input],
+            [x.name for x in self.graph().output]
+        )

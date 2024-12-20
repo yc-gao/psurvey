@@ -30,6 +30,4 @@ class ConvertShapeToInitializer:
 
         onnx_model.add_initializers(initializer_added)
         onnx_model.remove_nodes(node_removed)
-        onnx_model = OnnxModel(onnx_model.model())
-        onnx_model.remove_unused(input=False)
-        return onnx_model
+        return onnx_model.remove_unused()

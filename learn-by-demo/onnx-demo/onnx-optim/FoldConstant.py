@@ -43,4 +43,4 @@ class FoldConstant:
 
         onnx_model.remove_nodes(constant_nodes)
         onnx_model.add_initializers(new_initializers)
-        return OnnxModel(onnx_model.model())
+        return onnx_model.remove_unused()
