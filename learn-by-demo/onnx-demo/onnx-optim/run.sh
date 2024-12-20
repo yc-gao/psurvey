@@ -9,4 +9,5 @@
     --optimizer eliminate-reshape \
     --optimizer eliminate-cast \
     --optimizer eliminate-concat \
+    --optimizer onnx-simplifier \
     -o demo.onnx qualcomm_det2d_lane3d_det3d_occ_mono.onnx
