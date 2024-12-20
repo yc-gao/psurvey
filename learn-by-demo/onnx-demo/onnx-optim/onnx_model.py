@@ -2,6 +2,7 @@
 import os
 
 import onnx
+from onnx.utils import Extractor
 
 
 class OnnxModel:
@@ -14,30 +15,26 @@ class OnnxModel:
         model = onnx.shape_inference.infer_shapes(model)
         self._proto = model
 
-        self.node_name_to_node = {
+        self.name_to_node = {
             x.name: x for x in self._proto.graph.node
         }
         self.output_name_to_node = {
             output: node for node in self._proto.graph.node for output in node.output
         }
-        self.input_name_to_vinfo = {
+        self.name_to_initializer = {
+            x.name: x for x in self._proto.graph.initializer
+        }
+        self.name_to_input = {
             x.name: x for x in self._proto.graph.input
         }
-        self.output_name_to_vinfo = {
+        self.name_to_output = {
             x.name: x for x in self._proto.graph.output
-        }
-        self.initializer_name_to_initializer = {
-            x.name: x for x in self._proto.graph.initializer
         }
         self.name_to_vinfo = {
             x.name: x for x in self._proto.graph.value_info
         }
-        self.name_to_vinfo.update({
-            x.name: x for x in self._proto.graph.input
-        })
-        self.name_to_vinfo.update({
-            x.name: x for x in self._proto.graph.output
-        })
+        self.name_to_vinfo.update(self.name_to_input)
+        self.name_to_vinfo.update(self.name_to_output)
 
     def save(self, fpath):
         if isinstance(fpath, os.PathLike):
@@ -61,12 +58,19 @@ class OnnxModel:
     def input_names(self):
         return [x.name for x in self.inputs()]
 
+    def add_input(self, input):
+        self.add_inputs([input])
+
+    def add_inputs(self, inputs):
+        self.graph().input.extend(inputs)
+
     def remove_input(self, input):
+        self.graph().input.remove(input)
         self.remove_inputs([input])
 
     def remove_inputs(self, inputs):
         for x in inputs:
-            self.graph().input.remove(x)
+            self.remove_input(x)
 
     def outputs(self):
         return [x for x in self.graph().output]
@@ -81,27 +85,36 @@ class OnnxModel:
         self.graph().output.extend(outputs)
 
     def remove_output(self, output):
-        self.remove_outputs([output])
+        self.graph().output.remove(output)
 
     def remove_outputs(self, outputs):
         for x in outputs:
-            self.graph().output.remove(x)
+            self.remove_output(x)
+
+    def clear_outputs(self):
+        self.graph().ClearField('output')
 
     def initializers(self):
         return [x for x in self.graph().initializer]
 
-    def add_initializer(self, x):
-        self.add_initializers([x])
+    def get_initializer_by_name(self, name):
+        return self.name_to_initializer.get(name, None)
+
+    def initializer_names(self):
+        return [x.name for x in self.initializers()]
+
+    def add_initializer(self, initializer):
+        self.add_initializers([initializer])
 
     def add_initializers(self, initializers):
         self.graph().initializer.extend(initializers)
 
     def remove_initializer(self, initializer):
-        self.remove_initializers([initializer])
+        self.graph().initializer.remove(initializer)
 
     def remove_initializers(self, initializers):
         for x in initializers:
-            self.graph().initializer.remove(x)
+            self.remove_initializer(x)
 
     def vinfos(self):
         return [x for x in self.graph().value_info]
@@ -110,17 +123,17 @@ class OnnxModel:
         return self.name_to_vinfo.get(name)
 
     def remove_vinfo(self, vinfo):
-        self.remove_vinfos([vinfo])
+        self.graph().value_info.remove(vinfo)
 
     def remove_vinfos(self, vinfos):
         for x in vinfos:
-            self.graph().value_info.remove(x)
+            self.remove_vinfo(x)
 
     def nodes(self):
         return [x for x in self.graph().node]
 
     def get_node_by_name(self, name):
-        return self.node_name_to_node.get(name, None)
+        return self.name_to_node.get(name, None)
 
     def get_node_by_output_name(self, name):
         return self.output_name_to_node.get(name, None)
@@ -129,11 +142,11 @@ class OnnxModel:
         return [x for x in self.nodes() if x.op_type == optype]
 
     def remove_node(self, node):
-        self.remove_nodes([node])
+        self.graph().node.remove(node)
 
     def remove_nodes(self, nodes):
         for x in nodes:
-            self.graph().node.remove(x)
+            self.remove_node(x)
 
     def topological_sort(self, is_deterministic=False):
 
@@ -179,9 +192,9 @@ class OnnxModel:
 
             vinfo_visited.update(node.output)
             for input_name in node.input:
-                if input_name in self.input_name_to_vinfo:
+                if input_name in self.name_to_input:
                     input_visited.add(input_name)
-                elif input_name in self.initializer_name_to_initializer:
+                elif input_name in self.name_to_initializer:
                     initializer_visited.add(input_name)
                 else:
                     dfs(self.output_name_to_node.get(input_name, None))
@@ -207,3 +220,7 @@ class OnnxModel:
                 new_input_name = input_name_map.get(input_name, None)
                 if new_input_name:
                     node.input[idx] = new_input_name
+
+    def extract(self, input_names: list[str], output_names: list[str]):
+        e = Extractor(self.model())
+        return OnnxModel(e.extract_model(input_names, output_names))

@@ -1,7 +1,9 @@
 from onnx_model import OnnxModel
+from registry import optimizer
 
 
-class EliminateConstant:
+@optimizer('convert-constant-to-initializer')
+class ConvertConstantToInitializer:
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
         initializer_added = []
