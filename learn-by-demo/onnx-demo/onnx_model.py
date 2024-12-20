@@ -119,6 +119,9 @@ class OnnxModel:
     def nodes(self):
         return [x for x in self.graph().node]
 
+    def get_node_by_name(self, name):
+        return self.node_name_to_node.get(name, None)
+
     def get_node_by_output_name(self, name):
         return self.output_name_to_node.get(name, None)
 
