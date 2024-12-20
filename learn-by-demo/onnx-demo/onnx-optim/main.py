@@ -6,6 +6,8 @@ from onnx_model import OnnxModel
 from registry import find_optimizer
 
 import EliminateIdentity
+import EliminateReshape
+import EliminateCast
 import ConvertConstantToInitializer
 import FoldConstant
 import ConvertShapeToInitializer
