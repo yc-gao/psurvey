@@ -8,6 +8,7 @@ from registry import find_optimizer
 import EliminateIdentity
 import EliminateReshape
 import EliminateCast
+import EliminateConcat
 import ConvertConstantToInitializer
 import FoldConstant
 import ConvertShapeToInitializer
