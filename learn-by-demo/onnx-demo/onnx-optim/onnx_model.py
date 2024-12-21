@@ -75,6 +75,9 @@ class OnnxModel:
         for x in inputs:
             self.remove_input(x)
 
+    def remove_input_by_name(self, name):
+        self.remove_input(self.get_input_by_name(name))
+
     def outputs(self):
         return [x for x in self.graph().output]
 
@@ -96,6 +99,9 @@ class OnnxModel:
     def remove_outputs(self, outputs):
         for x in outputs:
             self.remove_output(x)
+
+    def remove_output_by_name(self, name):
+        self.remove_output(self.get_output_by_name(name))
 
     def clear_outputs(self):
         self.graph().ClearField('output')
@@ -122,6 +128,9 @@ class OnnxModel:
         for x in initializers:
             self.remove_initializer(x)
 
+    def remove_initializer_by_name(self, name):
+        self.remove_initializer(self.get_initializer_by_name(name))
+
     def vinfos(self):
         return [x for x in self.graph().value_info]
 
@@ -134,6 +143,9 @@ class OnnxModel:
     def remove_vinfos(self, vinfos):
         for x in vinfos:
             self.remove_vinfo(x)
+
+    def remove_vinfo_by_name(self, name):
+        self.remove_vinfo(self.get_vinfo_by_name(name))
 
     def nodes(self):
         return [x for x in self.graph().node]
@@ -153,6 +165,9 @@ class OnnxModel:
     def remove_nodes(self, nodes):
         for x in nodes:
             self.remove_node(x)
+
+    def remove_node_by_name(self, name):
+        self.remove_node(self.get_node_by_name(name))
 
     def topological_sort(self, is_deterministic=False):
 

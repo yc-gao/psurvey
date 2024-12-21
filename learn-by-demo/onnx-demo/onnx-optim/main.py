@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import warnings
+from functools import reduce
 
 from onnx_model import OnnxModel
 from registry import find_optimizer
@@ -38,12 +39,15 @@ def verify_model(origin_model, new_model):
             if x in ort.get_available_providers()
         ])
 
+    ret = True
     example_inputs = {x.name: random_tensor(x) for x in sess0.get_inputs()}
     sess0_outputs = sess0.run(None, example_inputs)
     sess1_outputs = sess1.run(None, example_inputs)
     for node, output0, output1 in zip(sess0.get_outputs(), sess0_outputs, sess1_outputs):
-        print(f"verify model output {node.name}",
-              np.allclose(output0, output1, rtol=1e-4, atol=1e-5))
+        is_closed = np.allclose(output0, output1, rtol=1e-4, atol=1e-5)
+        print(f"verify model output {node.name}", is_closed)
+        ret = ret and is_closed
+    return ret
 
 
 def parse_options():
@@ -67,8 +71,10 @@ def main():
             continue
         onnx_model = optimizer.apply(onnx_model)
 
-    for _ in range(options.verify):
-        verify_model(origin_model, onnx_model)
+    verify_ok = reduce(lambda t, _: t and verify_model(
+        origin_model, onnx_model), range(options.verify), True)
+    if not verify_ok:
+        warnings.warn("verify model failed")
 
     if options.output:
         onnx_model.save(options.output)
