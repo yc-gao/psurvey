@@ -1,4 +1,5 @@
 import onnx
+import numpy as np
 
 from onnx_model import OnnxModel
 from registry import optimizer
@@ -22,11 +23,9 @@ class ConvertShapeToInitializer:
             if any(x == -1 for x in shape):
                 continue
             initializer_added.append(
-                onnx.helper.make_tensor(
-                    node.output[0],
-                    onnx.TensorProto.DataType.INT64,
-                    [len(shape)],
-                    shape))
+                onnx.numpy_helper.from_array(
+                    np.array(shape, dtype=np.int64),
+                    node.output[0]))
             nodes_to_remove.append(node)
 
         onnx_model.add_initializers(initializer_added)
