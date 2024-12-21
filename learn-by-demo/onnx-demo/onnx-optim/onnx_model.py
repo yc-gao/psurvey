@@ -209,7 +209,7 @@ class OnnxModel:
         e = Extractor(self.model())
         return OnnxModel(e.extract_model(input_names, output_names))
 
-    def remove_unused(self):
+    def finalize(self):
         return self.extract(
             [x.name for x in self.graph().input],
             [x.name for x in self.graph().output]
