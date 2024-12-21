@@ -201,9 +201,23 @@ class OnnxModel:
     def remap_input_names(self, input_name_map):
         for node in self.nodes():
             for idx, input_name in enumerate(node.input):
-                new_input_name = input_name_map.get(input_name, None)
-                if new_input_name:
-                    node.input[idx] = new_input_name
+                while True:
+                    new_input_name = input_name_map.get(node.input[idx], None)
+                    if new_input_name:
+                        node.input[idx] = new_input_name
+                    else:
+                        break
+
+    def remap_output_names(self, output_name_map):
+        for node in self.nodes():
+            for idx, _ in enumerate(node.output):
+                while True:
+                    new_output_name = output_name_map.get(
+                        node.output[idx], None)
+                    if new_output_name:
+                        node.output[idx] = new_output_name
+                    else:
+                        break
 
     def extract(self, input_names: list[str], output_names: list[str]):
         e = Extractor(self.model())
