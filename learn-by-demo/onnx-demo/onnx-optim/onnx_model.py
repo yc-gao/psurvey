@@ -241,7 +241,9 @@ class OnnxModel:
                     idx += 1
                 node_names.add(name)
                 node.name = name
-        return self.extract(
+        onnx_model = self.extract(
             [x.name for x in self.graph().input],
             [x.name for x in self.graph().output]
         )
+        onnx_model.topological_sort()
+        return onnx_model
