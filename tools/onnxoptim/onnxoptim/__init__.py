@@ -1,2 +1,3 @@
 from .onnx_model import OnnxModel
-from .passes import optimizer, find_optimizer, DagMatcher
+from .dag_matcher import DagMatcher
+from .passes import optimizer, find_optimizer
