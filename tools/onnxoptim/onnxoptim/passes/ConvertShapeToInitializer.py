@@ -1,8 +1,8 @@
 import onnx
 import numpy as np
 
-from onnx_model import OnnxModel
-from registry import optimizer
+from ..onnx_model import OnnxModel
+from .registry import optimizer
 
 
 @optimizer('convert-shape-to-initializer')

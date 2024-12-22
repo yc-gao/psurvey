@@ -1,4 +1,4 @@
-from onnx_model import OnnxModel
+from ..onnx_model import OnnxModel
 
 
 class DagMatcher:
