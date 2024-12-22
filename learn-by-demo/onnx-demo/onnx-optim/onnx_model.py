@@ -156,6 +156,12 @@ class OnnxModel:
     def get_node_by_output_name(self, name):
         return self.output_name_to_node.get(name, None)
 
+    def add_node(self, node):
+        self.add_nodes([node])
+
+    def add_nodes(self, nodes):
+        self.graph().node.extend(nodes)
+
     def get_nodes_by_optype(self, optype):
         return [x for x in self.nodes() if x.op_type == optype]
 
@@ -200,7 +206,7 @@ class OnnxModel:
 
     def remap_input_names(self, input_name_map):
         for node in self.nodes():
-            for idx, input_name in enumerate(node.input):
+            for idx, _ in enumerate(node.input):
                 while True:
                     new_input_name = input_name_map.get(node.input[idx], None)
                     if new_input_name:
@@ -224,6 +230,17 @@ class OnnxModel:
         return OnnxModel(e.extract_model(input_names, output_names))
 
     def finalize(self):
+        node_names = {x.name for x in self.graph().node}
+        idx = 0
+        for node in self.graph().node:
+            if not node.name:
+                while True:
+                    name = f"random_{idx}"
+                    if name not in node_names:
+                        break
+                    idx += 1
+                node_names.add(name)
+                node.name = name
         return self.extract(
             [x.name for x in self.graph().input],
             [x.name for x in self.graph().output]
