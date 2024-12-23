@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='onnxoptim',
@@ -9,5 +9,5 @@ setup(
         'onnx',
         'onnxsim',
     ],
-    package_dir={'': 'onnxoptim'},
+    packages=find_packages(),
 )

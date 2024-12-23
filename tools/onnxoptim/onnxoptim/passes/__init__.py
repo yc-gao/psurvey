@@ -1,5 +1,4 @@
 from .registry import optimizer, find_optimizer
-from .dag_matcher import DagMatcher
 
 from . import ConvertConstantToInitializer
 from . import ConvertShapeToInitializer
