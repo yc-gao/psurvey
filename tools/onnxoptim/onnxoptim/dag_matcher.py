@@ -1,5 +1,14 @@
 from .onnx_model import OnnxModel
 
+# {
+#     'op_type': 'QuantizeLinear',
+#     'inputs': [
+#         {
+#             'op_type': 'DequantizeLinear'
+#         }
+#     ]
+# }
+
 
 class DagMatcher:
     def __init__(self, p={}):
@@ -38,15 +47,20 @@ class DagMatcher:
     def MatchDag(self, node, onnx_model: OnnxModel):
         if not self.MatchNode(node):
             return False, None
-        if 'inputs' not in self.pattern:
+
+        if not self.pattern.get('inputs', None):
             return True, {'id': self.pattern.get('id', -1), 'node': node}
         ipattern = self.pattern['inputs']
-        if ipattern and not node:
-            return False, None
-        if len(node.input) != len(ipattern):
-            return False, None
+        if ipattern[-1] is None:
+            if len(node.input) != len(ipattern) - 1:
+                return False, None
+            ipattern = ipattern[:-1]
+        else:
+            if len(node.input) < len(ipattern):
+                return False, None
+
         inputs = []
-        for p, n in zip(ipattern, node.input):
+        for p, n in zip(ipattern, node.input[:len(ipattern)]):
             dag_matcher = DagMatcher(p)
             ret, dag = dag_matcher.MatchDag(
                 onnx_model.get_node_by_output_name(n), onnx_model)
