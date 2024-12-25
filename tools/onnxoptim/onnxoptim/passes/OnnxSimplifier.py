@@ -11,5 +11,5 @@ class OnnxSimplifier:
         model, ret = simplify(onnx_model.model())
         if ret:
             print_simplifying_info(onnx_model.model(), model)
-            return onnx_model.finalize()
+            return OnnxModel(model)
         return onnx_model

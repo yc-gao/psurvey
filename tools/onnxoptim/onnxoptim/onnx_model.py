@@ -7,6 +7,9 @@ from onnx.utils import Extractor
 
 class OnnxModel:
     def __init__(self, model):
+        self.reindex(model)
+
+    def reindex(self, model):
         if isinstance(model, os.PathLike):
             model = os.fspath(model)
         if isinstance(model, str):
@@ -214,36 +217,27 @@ class OnnxModel:
                     else:
                         break
 
-    def remap_output_names(self, output_name_map):
-        for node in self.nodes():
-            for idx, _ in enumerate(node.output):
-                while True:
-                    new_output_name = output_name_map.get(
-                        node.output[idx], None)
-                    if new_output_name:
-                        node.output[idx] = new_output_name
-                    else:
-                        break
-
     def extract(self, input_names: list[str], output_names: list[str]):
         e = Extractor(self.model())
         return OnnxModel(e.extract_model(input_names, output_names))
 
-    def finalize(self):
-        node_names = {x.name for x in self.graph().node}
-        idx = 0
-        for node in self.graph().node:
-            if not node.name:
-                while True:
-                    name = f"random_{idx}"
-                    if name not in node_names:
-                        break
-                    idx += 1
-                node_names.add(name)
-                node.name = name
-        onnx_model = self.extract(
-            [x.name for x in self.graph().input],
-            [x.name for x in self.graph().output]
-        )
-        onnx_model.topological_sort()
-        return onnx_model
+    def Transaction(self):
+        class TransactionContext(object):
+            def __init__(self, onnx_model):
+                self.onnx_model = onnx_model
+
+            def __enter__(self):
+                return self.onnx_model
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                if exc_value is not None:
+                    raise exc_value
+                proto_model = self.onnx_model.model()
+                e = Extractor(proto_model)
+                new_model = e.extract_model(
+                    [x.name for x in proto_model.graph.input],
+                    [x.name for x in proto_model.graph.output])
+                self.onnx_model.reindex(new_model)
+                self.onnx_model.topological_sort()
+
+        return TransactionContext(self)
