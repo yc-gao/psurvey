@@ -6,17 +6,14 @@ from .registry import optimizer
 class ConvertConstantToInitializer:
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
-        with onnx_model.Transaction():
-            initializer_added = []
-            nodes_to_remove = []
+        with onnx_model.transaction() as t:
             for node in onnx_model.get_nodes_by_optype('Constant'):
                 assert len(node.attribute) == 1
                 attr = node.attribute[0]
                 if attr.HasField('t'):
-                    nodes_to_remove.append(node)
                     attr.t.name = node.output[0]
-                    initializer_added.append(attr.t)
 
-            onnx_model.add_initializers(initializer_added)
-            onnx_model.remove_nodes(nodes_to_remove)
+                    t.add_initializer(attr.t)
+                    t.remove_node(node)
+
         return onnx_model

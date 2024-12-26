@@ -44,7 +44,7 @@ def verify_model(origin_model, new_model, rtol=1e-4, atol=1e-5):
 def parse_options():
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', '--output')
-    parser.add_argument('--optimizer', action='append', default=[])
+    parser.add_argument('--optim', action='append', default=[])
     parser.add_argument('--verify', type=int, default=10)
     parser.add_argument('model')
     return parser.parse_args()
@@ -55,7 +55,7 @@ def main():
     origin_model = OnnxModel(options.model)
 
     onnx_model = origin_model.clone()
-    for x in options.optimizer:
+    for x in options.optim:
         optimizer = find_optimizer(x)
         if optimizer is None:
             warnings.warn(f"can not find '{x}' optimizer, ignore")

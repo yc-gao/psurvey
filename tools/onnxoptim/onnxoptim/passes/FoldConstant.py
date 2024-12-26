@@ -24,26 +24,25 @@ class FoldConstant:
 
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
-        with onnx_model.Transaction():
-            output_names = set(onnx_model.output_names())
-            input_names = set(onnx_model.input_names())
+        with onnx_model.transaction() as t:
             mutable_nodes = set()
+
+            input_names = set(onnx_model.input_names())
             for node in onnx_model.nodes():
                 if any(x in input_names for x in node.input):
                     input_names.update(node.output)
                     mutable_nodes.add(node.name)
 
+            output_names = set(onnx_model.output_names())
             nodes_to_fold = [
                 x for x in onnx_model.nodes()
                 if x.name not in mutable_nodes and all(
                     output_name not in output_names
                     for output_name in x.output)]
 
-            initializers_to_add = []
             for node in nodes_to_fold:
-                initializers_to_add.extend(
+                t.add_initializers(
                     FoldConstant.eval_const_node(onnx_model, node))
+                t.remove_node(node)
 
-            onnx_model.add_initializers(initializers_to_add)
-            onnx_model.remove_nodes(nodes_to_fold)
         return onnx_model

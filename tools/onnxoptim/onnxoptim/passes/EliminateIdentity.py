@@ -6,12 +6,8 @@ from .registry import optimizer
 class EliminateIdentity:
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
-        with onnx_model.Transaction():
-            input_name_map = {}
-            nodes_to_remove = []
+        with onnx_model.transaction() as t:
             for node in onnx_model.get_nodes_by_optype('Identity'):
-                input_name_map[node.output[0]] = node.input[0]
-                nodes_to_remove.append(node)
-            onnx_model.remap_input_names(input_name_map)
-            onnx_model.remove_nodes(nodes_to_remove)
+                t.remap_input_names({node.output[0]: node.input[0]})
+                t.remove_node(node)
         return onnx_model

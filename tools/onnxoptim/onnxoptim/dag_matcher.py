@@ -20,7 +20,7 @@ class DagMatcher:
             return dag.get('node', None)
         for input in dag.get('inputs', []):
             ret = DagMatcher.GetNode(input, idnum)
-            if ret:
+            if ret is not None:
                 return ret
         return None
 
@@ -44,7 +44,7 @@ class DagMatcher:
                     return False
         return True
 
-    def MatchDag(self, node, onnx_model: OnnxModel):
+    def MatchDag(self, onnx_model: OnnxModel, node):
         if not self.MatchNode(node):
             return False, None
 

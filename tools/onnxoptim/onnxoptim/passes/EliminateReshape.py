@@ -6,9 +6,7 @@ from .registry import optimizer
 class EliminateReshape:
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
-        with onnx_model.Transaction():
-            input_name_map = {}
-            nodes_to_remove = []
+        with onnx_model.transaction() as t:
             for node in reversed(onnx_model.get_nodes_by_optype('Reshape')):
                 i_vinfo = onnx_model.get_vinfo_by_name(node.input[0])
                 if i_vinfo is None:
@@ -19,9 +17,7 @@ class EliminateReshape:
                 if i_vinfo.type != o_vinfo.type:
                     continue
 
-                input_name_map[node.output[0]] = node.input[0]
-                nodes_to_remove.append(node)
+                t.remap_input_names({node.output[0]: node.input[0]})
+                t.remove_node(node)
 
-            onnx_model.remap_input_names(input_name_map)
-            onnx_model.remove_nodes(nodes_to_remove)
         return onnx_model
