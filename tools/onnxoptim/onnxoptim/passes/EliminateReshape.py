@@ -18,6 +18,5 @@ class EliminateReshape:
                     continue
 
                 t.remap_input_names({node.output[0]: node.input[0]})
-                t.remove_node(node)
 
         return onnx_model

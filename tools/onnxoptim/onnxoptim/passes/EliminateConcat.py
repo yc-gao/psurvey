@@ -14,6 +14,5 @@ class EliminateConcat:
                 if node.output[0] in output_names:
                     continue
                 t.remap_input_names({node.output[0]: node.input[0]})
-                t.remove_node(node)
 
         return onnx_model

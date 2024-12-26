@@ -8,3 +8,4 @@ from . import EliminateIdentity
 from . import EliminateReshape
 from . import FoldConstant
 from . import OnnxSimplifier
+from . import EliminateQdqPair
