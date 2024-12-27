@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import uuid
 
 import onnx
 from onnx.utils import Extractor
@@ -145,13 +146,28 @@ class OnnxModel:
             def __init__(self, onnx_model: OnnxModel):
                 self.onnx_model = onnx_model
 
-                self.remap_input_names = {}
+                self.input_names_remap = {}
 
                 self.initializers_to_remove = []
                 self.initializers_to_add = []
 
                 self.nodes_to_add = []
                 self.nodes_to_remove = []
+                self.nodes_to_remove_by_name = []
+
+                self.counter = 0
+
+            def unique_name(self):
+                while True:
+                    name = f"random_{uuid.uuid1()}_{self.counter}"
+                    self.counter += 1
+                    if self.onnx_model.get_node_by_name(name) is not None:
+                        continue
+                    if self.onnx_model.get_vinfo_by_name(name) is not None:
+                        continue
+                    if self.onnx_model.get_initializer_by_name(name) is not None:
+                        continue
+                    return name
 
             def remove_initializer(self, initializer):
                 self.initializers_to_remove.append(initializer)
@@ -168,6 +184,9 @@ class OnnxModel:
             def remove_node(self, node):
                 self.nodes_to_remove.append(node)
 
+            def remove_node_by_name(self, name):
+                self.nodes_to_remove_by_name.append(name)
+
             def remove_nodes(self, nodes):
                 self.nodes_to_remove.extend(nodes)
 
@@ -178,7 +197,7 @@ class OnnxModel:
                 self.nodes_to_add.extend(nodes)
 
             def remap_input_names(self, remap):
-                self.remap_input_names.update(remap)
+                self.input_names_remap.update(remap)
 
             def __enter__(self):
                 return self
@@ -190,7 +209,7 @@ class OnnxModel:
                 for node in self.onnx_model.nodes():
                     for idx, _ in enumerate(node.input):
                         while True:
-                            new_input_name = self.remap_input_names.get(
+                            new_input_name = self.input_names_remap.get(
                                 node.input[idx], None)
                             if new_input_name is None:
                                 break
@@ -200,10 +219,14 @@ class OnnxModel:
                     self.onnx_model.graph().initializer.remove(initializer)
                 for node in self.nodes_to_remove:
                     self.onnx_model.graph().node.remove(node)
+                for name in self.nodes_to_remove_by_name:
+                    node = self.onnx_model.get_node_by_name(name)
+                    if node is not None:
+                        self.onnx_model.graph().node.remove(node)
 
-                if not self.initializers_to_add:
+                if self.initializers_to_add:
                     self.onnx_model.graph().initializer.extend(self.initializers_to_add)
-                if not self.nodes_to_add:
+                if self.nodes_to_add:
                     self.onnx_model.graph().node.extend(self.nodes_to_add)
 
                 proto_model = self.onnx_model.model()

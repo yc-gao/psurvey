@@ -9,3 +9,5 @@ from . import EliminateReshape
 from . import FoldConstant
 from . import OnnxSimplifier
 from . import EliminateQdqPair
+from . import FuseBnIntoConv
+from . import FuseBnIntoGemm

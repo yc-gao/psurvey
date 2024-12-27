@@ -75,6 +75,8 @@ def do_verify(model0, model1, rtol=1e-2, atol=1e-3):
                 min_val = tmp.min()
                 mean_val = tmp.mean()
                 print(f"diff {max_val} {min_val} {mean_val} {tmp.argmax()}")
+            else:
+                print(f"verify field[{node.name}]...passed")
 
 
 def parse_options():

@@ -63,7 +63,8 @@ class DagMatcher:
         for p, n in zip(ipattern, node.input[:len(ipattern)]):
             dag_matcher = DagMatcher(p)
             ret, dag = dag_matcher.MatchDag(
-                onnx_model.get_node_by_output_name(n), onnx_model)
+                onnx_model,
+                onnx_model.get_node_by_output_name(n))
             if not ret:
                 return False, None
             inputs.append(dag)
@@ -79,7 +80,7 @@ class DagMatcher:
         for node in reversed(onnx_model.nodes()):
             if node.name in node_matched:
                 continue
-            ret, dag = self.MatchDag(node, onnx_model)
+            ret, dag = self.MatchDag(onnx_model, node)
             if not ret:
                 continue
             all_nodes = DagMatcher.GetAllNodes(dag)
