@@ -9,7 +9,6 @@ def parse_options():
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', '--output')
     parser.add_argument('--optim', action='append', default=[])
-    parser.add_argument('--verify', type=int, default=10)
     parser.add_argument('model')
     return parser.parse_args()
 
