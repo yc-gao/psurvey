@@ -26,6 +26,11 @@ class OnnxNode:
             value = attribute
         return value
 
+    def clone(self):
+        t = NodeProto()
+        t.CopyFrom(self._proto)
+        return OnnxNode(t)
+
     def __init__(self, onnx_node: NodeProto):
         self._proto = onnx_node
 

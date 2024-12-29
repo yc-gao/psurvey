@@ -1,9 +1,12 @@
 import os
+import uuid
+from collections import Counter
 
 import onnx
 from onnx.utils import Extractor
 from onnx.onnx_ml_pb2 import ModelProto
 from onnx.onnx_ml_pb2 import TensorProto
+from onnx.onnx_ml_pb2 import NodeProto
 
 from .onnx_tensor import OnnxTensor
 from .onnx_node import OnnxNode
@@ -29,6 +32,13 @@ class OnnxModel:
         self._name_to_node = {
             x.name: x for x in self._nodes
         }
+        self._output_to_node = {
+            output: node for node in self._nodes for output in node.output_values()
+        }
+
+        self._name_to_initializer = {
+            x.name(): x for x in self._initializers
+        }
 
         self._name_to_vinfo = {
             x.name: x for x in self._proto.graph.value_info
@@ -39,6 +49,11 @@ class OnnxModel:
         self._name_to_vinfo.update({
             x.name: x for x in self._proto.graph.output
         })
+
+        self._name_to_counter = Counter(
+            [input_name for node in self._proto.graph.node for input_name in node.input] +
+            [x.name for x in self._proto.graph.output]
+        )
 
     def clone(self):
         t = ModelProto()
@@ -74,6 +89,9 @@ class OnnxModel:
     def initializer_names(self):
         return set({x.name for x in self._initializers})
 
+    def get_initializer_by_name(self, name) -> OnnxTensor:
+        return self._name_to_initializer.get(name, None)
+
     def nodes(self):
         return self._nodes
 
@@ -83,8 +101,23 @@ class OnnxModel:
     def get_node_by_name(self, name):
         return self._name_to_node.get(name, None)
 
+    def get_node_by_output(self, output):
+        return self._output_to_node.get(output, None)
+
     def get_vinfo_by_name(self, name):
         return self._name_to_vinfo.get(name, None)
+
+    def get_counter_of_tensor(self, name: str):
+        return self._name_to_counter[name]
+
+    def get_counter_of_node(self, name_or_node):
+        if isinstance(name_or_node, str):
+            name_or_node = self._name_to_node.get(name_or_node, None)
+        if name_or_node is None:
+            return 0
+        return max(
+            self._name_to_counter[output_value]
+            for output_value in name_or_node.output_values())
 
     def extract(self, input_names: list[str], output_names: list[str]):
         e = Extractor(self.proto())
@@ -95,13 +128,27 @@ class OnnxModel:
             def __init__(self, onnx_model: OnnxModel):
                 self._onnx_model = onnx_model
 
+                self._counter = 0
+
                 self._remap_input_values = {}
 
                 self._initializers_to_remove = []
+                self._initializers_to_add = []
 
                 self._nodes_to_remove = []
+                self._nodes_to_add = []
 
-                self._initializers_to_add = []
+            def unique_name(self):
+                while True:
+                    name = f"random_{uuid.uuid1()}_{self._counter}"
+                    self._counter += 1
+                    if self._onnx_model.get_node_by_name(name) is not None:
+                        continue
+                    if self._onnx_model.get_vinfo_by_name(name) is not None:
+                        continue
+                    if self._onnx_model.get_initializer_by_name(name) is not None:
+                        continue
+                    return name
 
             def add_initializer(self, tensor: TensorProto):
                 self._initializers_to_add.append(tensor)
@@ -111,6 +158,9 @@ class OnnxModel:
 
             def remove_initializer(self, tensor: OnnxTensor):
                 self._initializers_to_remove.append(tensor)
+
+            def add_node(self, node: NodeProto):
+                self._nodes_to_add.append(node)
 
             def remove_node(self, node: OnnxNode):
                 self._nodes_to_remove.append(node)
@@ -140,9 +190,9 @@ class OnnxModel:
                 for x in self._nodes_to_remove:
                     onnx_model.graph.node.remove(x.proto())
 
-                if self._initializers_to_add:
-                    onnx_model.graph.initializer.extend(
-                        self._initializers_to_add)
+                onnx_model.graph.initializer.extend(
+                    self._initializers_to_add)
+                onnx_model.graph.node.extend(self._nodes_to_add)
 
                 e = Extractor(onnx_model)
                 new_model = e.extract_model(
