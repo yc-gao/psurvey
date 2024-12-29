@@ -6,3 +6,4 @@ from . import convert_shape_to_initializer
 from . import eliminate_identity
 
 from . import fold_constant
+from . import fold_bn_into_conv
