@@ -18,15 +18,26 @@ class OnnxModel:
         return OnnxModel(onnx.load(fpath))
 
     def reindex(self, model: ModelProto):
+        model = onnx.shape_inference.infer_shapes(model)
         self._proto = model
 
-        self._nodes = tuple(OnnxNode(x) for x in self._proto.graph.node)
+        self._nodes = {x.name: OnnxNode(x) for x in self._proto.graph.node}
         self._initializers = {
             x.name: OnnxTensor(x)
             for x in self._proto.graph.initializer
         }
-        self._input_values = tuple(self._proto.graph.input)
-        self._output_values = tuple(self._proto.graph.output)
+        self._input_values = {x.name: x for x in self._proto.graph.input}
+        self._output_values = {x.name: x for x in self._proto.graph.output}
+
+        self._value_infos = {
+            x.name: x for x in self._proto.graph.value_info
+        }
+        self._value_infos.update({
+            x.name: x for x in self._proto.graph.output
+        })
+        self._value_infos.update({
+            x.name: x for x in self._proto.graph.input
+        })
 
     def clone(self):
         t = ModelProto()
@@ -47,11 +58,11 @@ class OnnxModel:
 
     @property
     def input_values(self):
-        return self._input_values
+        return MappingProxyType(self._input_values)
 
     @property
     def output_values(self):
-        return self._output_values
+        return MappingProxyType(self._output_values)
 
     @property
     def initializers(self):
@@ -59,7 +70,11 @@ class OnnxModel:
 
     @property
     def nodes(self):
-        return self._nodes
+        return MappingProxyType(self._nodes)
+
+    @property
+    def value_infos(self):
+        return MappingProxyType(self._value_infos)
 
     def session(self):
         class Session:
@@ -96,7 +111,7 @@ class OnnxModel:
                         self.initializers_to_add)
 
                 for x in self.nodes_to_remove:
-                    onnx_model.grapg.node.remove(x.proto)
+                    onnx_model.graph.node.remove(x.proto)
 
                 e = Extractor(onnx_model)
                 new_model = e.extract_model(

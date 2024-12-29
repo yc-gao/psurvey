@@ -43,6 +43,10 @@ class OnnxNode:
         return self._proto
 
     @property
+    def name(self):
+        return self._proto.name
+
+    @property
     def domain(self):
         return self._proto.domain
 
