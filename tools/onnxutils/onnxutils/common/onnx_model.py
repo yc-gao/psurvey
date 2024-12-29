@@ -1,4 +1,3 @@
-from types import MappingProxyType
 import os
 
 import onnx
@@ -60,14 +59,26 @@ class OnnxModel:
     def input_values(self):
         return self._input_values
 
+    def input_names(self):
+        return {x.name for x in self._input_values}
+
     def output_values(self):
         return self._output_values
+
+    def output_names(self):
+        return {x.name for x in self._output_values}
 
     def initializers(self):
         return self._initializers
 
+    def initializer_names(self):
+        return {x.name for x in self._initializers}
+
     def nodes(self):
         return self._nodes
+
+    def node_names(self):
+        return {x.name for x in self._nodes}
 
     def get_node_by_name(self, name):
         return self._name_to_node.get(name, None)

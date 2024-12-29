@@ -9,7 +9,7 @@ from .registry import optimizer
 class _:
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
-        output_names = {x.name for x in onnx_model.output_values()}
+        output_names = onnx_model.output_names()
         with onnx_model.session() as sess:
             for node in onnx_model.nodes():
                 if node.op_type() != 'Shape':
