@@ -81,19 +81,24 @@ class OnnxModel:
             def __init__(self, onnx_model: OnnxModel):
                 self._onnx_model = onnx_model
 
-                self.initializers_to_remove = []
-                self.initializers_to_add = []
+                self._remap_input_values = {}
 
-                self.nodes_to_remove = []
+                self._initializers_to_remove = []
+                self._initializers_to_add = []
+
+                self._nodes_to_remove = []
 
             def remove_initializer(self, tensor: OnnxTensor):
-                self.initializers_to_remove.append(tensor)
+                self._initializers_to_remove.append(tensor)
 
             def add_initializer(self, tensor: TensorProto):
-                self.initializers_to_add.append(tensor)
+                self._initializers_to_add.append(tensor)
 
             def remove_node(self, node: OnnxNode):
-                self.nodes_to_remove.append(node)
+                self._nodes_to_remove.append(node)
+
+            def remap_input_values(self, remap):
+                self._remap_input_values.update(remap)
 
             def __enter__(self):
                 return self
@@ -103,14 +108,22 @@ class OnnxModel:
                     raise exc_value
 
                 onnx_model = self._onnx_model.proto
+                for node in onnx_model.graph.node:
+                    for idx in range(len(node.input)):
+                        while True:
+                            new_value = self._remap_input_values.get(
+                                node.input[idx], None)
+                            if new_value is None:
+                                break
+                            node.input[idx] = new_value
 
-                for x in self.initializers_to_remove:
+                for x in self._initializers_to_remove:
                     onnx_model.graph.initializer.remove(x.proto)
-                if self.initializers_to_add:
+                if self._initializers_to_add:
                     onnx_model.graph.initializer.extend(
-                        self.initializers_to_add)
+                        self._initializers_to_add)
 
-                for x in self.nodes_to_remove:
+                for x in self._nodes_to_remove:
                     onnx_model.graph.node.remove(x.proto)
 
                 e = Extractor(onnx_model)
