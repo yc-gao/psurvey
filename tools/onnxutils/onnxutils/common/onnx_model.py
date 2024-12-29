@@ -20,11 +20,11 @@ class OnnxModel:
         model = onnx.shape_inference.infer_shapes(model)
         self._proto = model
 
-        self._nodes = (OnnxNode(x) for x in self._proto.graph.node)
-        self._input_values = (x for x in self._proto.graph.input)
-        self._output_values = (x for x in self._proto.graph.output)
-        self._initializers = (OnnxTensor(x)
-                              for x in self._proto.graph.initializer)
+        self._nodes = tuple(OnnxNode(x) for x in self._proto.graph.node)
+        self._input_values = tuple(x for x in self._proto.graph.input)
+        self._output_values = tuple(x for x in self._proto.graph.output)
+        self._initializers = tuple(OnnxTensor(x)
+                                   for x in self._proto.graph.initializer)
 
         self._name_to_node = {
             x.name: x for x in self._nodes
@@ -60,31 +60,35 @@ class OnnxModel:
         return self._input_values
 
     def input_names(self):
-        return {x.name for x in self._input_values}
+        return set({x.name for x in self._input_values})
 
     def output_values(self):
         return self._output_values
 
     def output_names(self):
-        return {x.name for x in self._output_values}
+        return set({x.name for x in self._output_values})
 
     def initializers(self):
         return self._initializers
 
     def initializer_names(self):
-        return {x.name for x in self._initializers}
+        return set({x.name for x in self._initializers})
 
     def nodes(self):
         return self._nodes
 
     def node_names(self):
-        return {x.name for x in self._nodes}
+        return set({x.name for x in self._nodes})
 
     def get_node_by_name(self, name):
         return self._name_to_node.get(name, None)
 
     def get_vinfo_by_name(self, name):
         return self._name_to_vinfo.get(name, None)
+
+    def extract(self, input_names: list[str], output_names: list[str]):
+        e = Extractor(self.proto())
+        return OnnxModel(e.extract_model(input_names, output_names))
 
     def session(self):
         class Session:
@@ -94,12 +98,16 @@ class OnnxModel:
                 self._remap_input_values = {}
 
                 self._initializers_to_remove = []
-                self._initializers_to_add = []
 
                 self._nodes_to_remove = []
 
+                self._initializers_to_add = []
+
             def add_initializer(self, tensor: TensorProto):
                 self._initializers_to_add.append(tensor)
+
+            def add_initializers(self, tensors: list[TensorProto]):
+                self._initializers_to_add.extend(tensors)
 
             def remove_initializer(self, tensor: OnnxTensor):
                 self._initializers_to_remove.append(tensor)
@@ -128,13 +136,13 @@ class OnnxModel:
                             node.input[idx] = new_value
 
                 for x in self._initializers_to_remove:
-                    onnx_model.graph.initializer.remove(x.proto)
+                    onnx_model.graph.initializer.remove(x.proto())
+                for x in self._nodes_to_remove:
+                    onnx_model.graph.node.remove(x.proto())
+
                 if self._initializers_to_add:
                     onnx_model.graph.initializer.extend(
                         self._initializers_to_add)
-
-                for x in self._nodes_to_remove:
-                    onnx_model.graph.node.remove(x.proto)
 
                 e = Extractor(onnx_model)
                 new_model = e.extract_model(
