@@ -18,11 +18,9 @@ class OnnxTensor:
     def __init__(self, onnx_tensor: TensorProto):
         self._proto = onnx_tensor
 
-    @property
     def proto(self):
         return self._proto
 
-    @property
     def name(self) -> str:
         return self._proto.name
 

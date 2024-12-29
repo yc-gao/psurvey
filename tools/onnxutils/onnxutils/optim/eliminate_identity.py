@@ -7,13 +7,13 @@ from .registry import optimizer
 class _:
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
-        output_names = set(onnx_model.output_values.keys())
+        output_names = {x.name for x in onnx_model.output_values()}
         with onnx_model.session() as sess:
-            for node in onnx_model.nodes.values():
-                if node.op_type != 'Identity':
+            for node in onnx_model.nodes():
+                if node.op_type() != 'Identity':
                     continue
-                if node.output_values[0] in output_names:
+                if node.output_values()[0] in output_names:
                     continue
                 sess.remap_input_values(
-                    {node.output_values[0]: node.input_values[0]})
+                    {node.output_values()[0]: node.input_values()[0]})
         return onnx_model

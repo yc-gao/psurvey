@@ -7,14 +7,14 @@ from .registry import optimizer
 class OnnxSimplifier:
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
-        output_names = set(onnx_model.output_values.keys())
+        output_names = {x.name for x in onnx_model.output_values()}
         with onnx_model.session() as sess:
-            for node in onnx_model.nodes.values():
-                if node.op_type != 'Constant':
+            for node in onnx_model.nodes():
+                if node.op_type() != 'Constant':
                     continue
-                if node.output_values[0] in output_names:
+                if node.output_values()[0] in output_names:
                     continue
-                val = node.attributes.get('value', None)
+                val = node.attributes().get('value', None)
                 if val is None:
                     continue
 

@@ -21,22 +21,24 @@ class OnnxModel:
         model = onnx.shape_inference.infer_shapes(model)
         self._proto = model
 
-        self._nodes = {x.name: OnnxNode(x) for x in self._proto.graph.node}
-        self._initializers = {
-            x.name: OnnxTensor(x)
-            for x in self._proto.graph.initializer
-        }
-        self._input_values = {x.name: x for x in self._proto.graph.input}
-        self._output_values = {x.name: x for x in self._proto.graph.output}
+        self._nodes = (OnnxNode(x) for x in self._proto.graph.node)
+        self._input_values = (x for x in self._proto.graph.input)
+        self._output_values = (x for x in self._proto.graph.output)
+        self._initializers = (OnnxTensor(x)
+                              for x in self._proto.graph.initializer)
 
-        self._value_infos = {
+        self._name_to_node = {
+            x.name: x for x in self._nodes
+        }
+
+        self._name_to_vinfo = {
             x.name: x for x in self._proto.graph.value_info
         }
-        self._value_infos.update({
-            x.name: x for x in self._proto.graph.output
-        })
-        self._value_infos.update({
+        self._name_to_vinfo.update({
             x.name: x for x in self._proto.graph.input
+        })
+        self._name_to_vinfo.update({
+            x.name: x for x in self._proto.graph.output
         })
 
     def clone(self):
@@ -52,29 +54,26 @@ class OnnxModel:
     def __init__(self, model: ModelProto):
         self.reindex(model)
 
-    @property
     def proto(self):
         return self._proto
 
-    @property
     def input_values(self):
-        return MappingProxyType(self._input_values)
+        return self._input_values
 
-    @property
     def output_values(self):
-        return MappingProxyType(self._output_values)
+        return self._output_values
 
-    @property
     def initializers(self):
-        return MappingProxyType(self._initializers)
+        return self._initializers
 
-    @property
     def nodes(self):
-        return MappingProxyType(self._nodes)
+        return self._nodes
 
-    @property
-    def value_infos(self):
-        return MappingProxyType(self._value_infos)
+    def get_node_by_name(self, name):
+        return self._name_to_node.get(name, None)
+
+    def get_vinfo_by_name(self, name):
+        return self._name_to_vinfo.get(name, None)
 
     def session(self):
         class Session:
@@ -88,11 +87,11 @@ class OnnxModel:
 
                 self._nodes_to_remove = []
 
-            def remove_initializer(self, tensor: OnnxTensor):
-                self._initializers_to_remove.append(tensor)
-
             def add_initializer(self, tensor: TensorProto):
                 self._initializers_to_add.append(tensor)
+
+            def remove_initializer(self, tensor: OnnxTensor):
+                self._initializers_to_remove.append(tensor)
 
             def remove_node(self, node: OnnxNode):
                 self._nodes_to_remove.append(node)
@@ -107,7 +106,7 @@ class OnnxModel:
                 if exc_value is not None:
                     raise exc_value
 
-                onnx_model = self._onnx_model.proto
+                onnx_model = self._onnx_model.proto()
                 for node in onnx_model.graph.node:
                     for idx in range(len(node.input)):
                         while True:

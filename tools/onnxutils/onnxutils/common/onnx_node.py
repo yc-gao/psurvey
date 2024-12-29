@@ -32,31 +32,24 @@ class OnnxNode:
         self._input_values = tuple(self._proto.input)
         self._output_values = tuple(self._proto.output)
 
-    @property
     def proto(self):
         return self._proto
 
-    @property
     def name(self):
         return self._proto.name
 
-    @property
     def domain(self):
         return self._proto.domain
 
-    @property
     def op_type(self):
         return self._proto.op_type
 
-    @property
     def input_values(self):
         return self._input_values
 
-    @property
     def output_values(self):
         return self._output_values
 
-    @property
     def attributes(self):
         return {
             attribute.name: OnnxNode._parse_attribute_value(attribute)

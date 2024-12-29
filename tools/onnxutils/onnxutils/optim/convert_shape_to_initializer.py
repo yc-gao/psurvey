@@ -9,15 +9,15 @@ from .registry import optimizer
 class _:
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
-        output_names = set(onnx_model.output_values.keys())
+        output_names = {x.name for x in onnx_model.output_values()}
         with onnx_model.session() as sess:
-            for node in onnx_model.nodes.values():
-                if node.op_type != 'Shape':
+            for node in onnx_model.nodes():
+                if node.op_type() != 'Shape':
                     continue
-                if node.output_values[0] in output_names:
+                if node.output_values()[0] in output_names:
                     continue
 
-                vinfo = onnx_model.value_infos.get(node.input_values[0])
+                vinfo = onnx_model.get_vinfo_by_name(node.input_values()[0])
                 if vinfo is None:
                     continue
 
