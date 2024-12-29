@@ -8,7 +8,7 @@ from onnxutils.common import OnnxModel
 from .registry import optimizer
 
 
-@optimizer('fold-constant')
+@optimizer('fold-bn-into-conv')
 class FoldConstant:
     @staticmethod
     def apply(onnx_model: OnnxModel) -> OnnxModel:
