@@ -1,5 +1,3 @@
-from types import MappingProxyType
-
 from onnx.onnx_ml_pb2 import NodeProto, AttributeProto
 
 from .onnx_tensor import OnnxTensor
@@ -34,10 +32,6 @@ class OnnxNode:
         self._input_values = tuple(self._proto.input)
         self._output_values = tuple(self._proto.output)
 
-        self._attributes = {
-            attribute.name: OnnxNode._parse_attribute_value(attribute) for attribute in self._proto.attribute
-        }
-
     @property
     def proto(self):
         return self._proto
@@ -64,4 +58,7 @@ class OnnxNode:
 
     @property
     def attributes(self):
-        return MappingProxyType(self._attributes)
+        return {
+            attribute.name: OnnxNode._parse_attribute_value(attribute)
+            for attribute in self._proto.attribute
+        }
