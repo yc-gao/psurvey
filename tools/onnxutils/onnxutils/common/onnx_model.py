@@ -71,6 +71,9 @@ class OnnxModel:
     def proto(self):
         return self._proto
 
+    def opsets(self):
+        return tuple(x for x in self._proto.opset_import)
+
     def input_values(self):
         return self._input_values
 
