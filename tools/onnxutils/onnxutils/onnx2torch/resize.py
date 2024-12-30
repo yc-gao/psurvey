@@ -40,7 +40,6 @@ class TorchResize(nn.Module, OnnxToTorchModule):
 
 @converter(operation_type='Resize', version=13)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  # pylint: disable=unused-argument
-    print(onnx_node.name())
     coordinate_transformation_mode = onnx_node.attributes().get(
         'coordinate_transformation_mode', 'half_pixel')
     cubic_coeff_a = onnx_node.attributes().get('cubic_coeff_a', -0.75)
