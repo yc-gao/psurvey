@@ -35,12 +35,21 @@ class TorchBinaryOp(nn.Module, OnnxToTorchModule):
 @converter(operation_type='Mul', version=14)
 @converter(operation_type='Div', version=14)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
+    print(onnx_node.name())
     op_type = onnx_node.op_type()
     if op_type == 'Div':
         inputs = [
-            onnx_model.get_vinfo_by_name(x).type.tensor_type.elem_type
+            onnx_model.get_vinfo_by_name(x)
             for x in onnx_node.inputs()
         ]
+        for idx, input_name in enumerate(onnx_node.inputs()):
+            if inputs[idx] is None:
+                tensor = onnx_model.get_initializer_by_name(input_name)
+                if tensor is not None:
+                    inputs[idx] = tensor.proto().data_type
+            else:
+                inputs[idx] = inputs[idx].type.tensor_type.elem_type
+
         integer_types = (
             onnx.TensorProto.DataType.UINT8,
             onnx.TensorProto.DataType.INT8,
