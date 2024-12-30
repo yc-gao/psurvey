@@ -10,8 +10,11 @@ from .utils import OnnxToTorchModule, OperationConverterResult, onnx_mapping_fro
 
 func_mapping = {
     'Abs': torch.abs,
+    'Neg': torch.neg,
     'Sqrt': torch.sqrt,
     'Atan': torch.atan,
+    'Cos': torch.cos,
+    'Sin': torch.sin,
 }
 
 
@@ -25,8 +28,11 @@ class TorchUnaryOp(nn.Module, OnnxToTorchModule):
 
 
 @converter(operation_type='Abs', version=13)
+@converter(operation_type='Neg', version=13)
 @converter(operation_type='Sqrt', version=13)
 @converter(operation_type='Atan', version=7)
+@converter(operation_type='Cos', version=7)
+@converter(operation_type='Sin', version=7)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
     return OperationConverterResult(
         torch_module=TorchUnaryOp(func_mapping[onnx_node.op_type()]),

@@ -15,6 +15,7 @@ func_mapping = {
     'Div': torch.div,
     'Div_int': lambda a, b: torch.div(a, b, rounding_mode='trunc'),
     'Pow': torch.pow,
+    'Equal': torch.equal,
     'Greater': torch.gt,
     'Less': torch.lt,
     'And': torch.logical_and,
@@ -31,6 +32,7 @@ class TorchBinaryOp(nn.Module, OnnxToTorchModule):
         return self.f(x0, x1)
 
 
+@converter(operation_type='Equal', version=13)
 @converter(operation_type='Greater', version=13)
 @converter(operation_type='Less', version=13)
 @converter(operation_type='LessOrEqual', version=16)
