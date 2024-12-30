@@ -38,6 +38,7 @@ class TorchResize(nn.Module, OnnxToTorchModule):
         return x
 
 
+# TODO: yinchao check later
 @converter(operation_type='Resize', version=13)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  # pylint: disable=unused-argument
     coordinate_transformation_mode = onnx_node.attributes().get(
