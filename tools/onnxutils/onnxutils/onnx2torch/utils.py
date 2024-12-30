@@ -1,7 +1,14 @@
 from typing import Tuple
 from typing import NamedTuple
 
+import torch
 from onnxutils.common import OnnxNode
+
+
+class OperationDescription(NamedTuple):
+    domain: str
+    operation_type: str
+    version: int
 
 
 class OnnxToTorchModule:
@@ -13,10 +20,9 @@ class OnnxMapping(NamedTuple):
     outputs: Tuple[str, ...]
 
 
-class OperationDescription(NamedTuple):
-    domain: str
-    operation_type: str
-    version: int
+class OperationConverterResult(NamedTuple):
+    torch_module: torch.nn.Module
+    onnx_mapping: OnnxMapping
 
 
 def onnx_mapping_from_node(node: OnnxNode) -> OnnxMapping:
