@@ -12,8 +12,8 @@ class _:
             for node in onnx_model.nodes():
                 if node.op_type() != 'Identity':
                     continue
-                if node.output_values()[0] in output_names:
+                if node.outputs()[0] in output_names:
                     continue
-                sess.remap_input_values(
-                    {node.output_values()[0]: node.input_values()[0]})
+                sess.remap_inputs(
+                    {node.outputs()[0]: node.inputs()[0]})
         return onnx_model

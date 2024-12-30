@@ -18,6 +18,6 @@ class FoldConstant:
             onnx_model.save(origin_model)
             if not os.system(
                     f"python3 -m onnxoptimizer {origin_model} {output_model}"):
-                return OnnxModel(output_model)
+                return OnnxModel.from_file(output_model)
             warnings.warn("'fuse-bn-into-conv' run failed")
             return onnx_model

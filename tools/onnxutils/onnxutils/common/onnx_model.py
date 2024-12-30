@@ -24,8 +24,8 @@ class OnnxModel:
         self._proto = model
 
         self._nodes = tuple(OnnxNode(x) for x in self._proto.graph.node)
-        self._input_values = tuple(x for x in self._proto.graph.input)
-        self._output_values = tuple(x for x in self._proto.graph.output)
+        self._inputs = tuple(x for x in self._proto.graph.input)
+        self._outputs = tuple(x for x in self._proto.graph.output)
         self._initializers = tuple(OnnxTensor(x)
                                    for x in self._proto.graph.initializer)
 
@@ -33,22 +33,24 @@ class OnnxModel:
             x.name: x for x in self._nodes
         }
         self._output_to_node = {
-            output: node for node in self._nodes for output in node.output_values()
+            output: node for node in self._nodes for output in node.outputs()
         }
 
         self._name_to_initializer = {
             x.name(): x for x in self._initializers
         }
 
+        self._name_to_input = {
+            x.name: x for x in self._inputs
+        }
+        self._name_to_output = {
+            x.name: x for x in self._outputs
+        }
         self._name_to_vinfo = {
             x.name: x for x in self._proto.graph.value_info
         }
-        self._name_to_vinfo.update({
-            x.name: x for x in self._proto.graph.input
-        })
-        self._name_to_vinfo.update({
-            x.name: x for x in self._proto.graph.output
-        })
+        self._name_to_vinfo.update(self._name_to_input)
+        self._name_to_vinfo.update(self._name_to_output)
 
         self._name_to_counter = Counter(
             [input_name for node in self._proto.graph.node for input_name in node.input] +
@@ -74,17 +76,23 @@ class OnnxModel:
     def opsets(self):
         return tuple(x for x in self._proto.opset_import)
 
-    def input_values(self):
-        return self._input_values
+    def inputs(self):
+        return self._inputs
 
     def input_names(self):
-        return set({x.name for x in self._input_values})
+        return set({x.name for x in self._inputs})
 
-    def output_values(self):
-        return self._output_values
+    def get_input_by_name(self, name):
+        return self._name_to_input.get(name, None)
+
+    def outputs(self):
+        return self._outputs
 
     def output_names(self):
-        return set({x.name for x in self._output_values})
+        return set({x.name for x in self._outputs})
+
+    def get_output_by_name(self, name):
+        return self._name_to_output.get(name, None)
 
     def initializers(self):
         return self._initializers
@@ -120,7 +128,7 @@ class OnnxModel:
             return 0
         return max(
             self._name_to_counter[output_value]
-            for output_value in name_or_node.output_values())
+            for output_value in name_or_node.outputs())
 
     def extract(self, input_names: list[str], output_names: list[str]):
         e = Extractor(self.proto())
@@ -133,7 +141,7 @@ class OnnxModel:
 
                 self._counter = 0
 
-                self._remap_input_values = {}
+                self._remap_inputs = {}
 
                 self._initializers_to_remove = []
                 self._initializers_to_add = []
@@ -168,8 +176,8 @@ class OnnxModel:
             def remove_node(self, node: OnnxNode):
                 self._nodes_to_remove.append(node)
 
-            def remap_input_values(self, remap):
-                self._remap_input_values.update(remap)
+            def remap_inputs(self, remap):
+                self._remap_inputs.update(remap)
 
             def __enter__(self):
                 return self
@@ -182,7 +190,7 @@ class OnnxModel:
                 for node in onnx_model.graph.node:
                     for idx in range(len(node.input)):
                         while True:
-                            new_value = self._remap_input_values.get(
+                            new_value = self._remap_inputs.get(
                                 node.input[idx], None)
                             if new_value is None:
                                 break

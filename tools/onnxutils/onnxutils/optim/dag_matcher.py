@@ -57,14 +57,14 @@ class DagMatcher:
 
         if ipattern[-1] is None:
             ipattern = ipattern[:-1]
-            if len(node.input_values()) != len(ipattern):
+            if len(node.inputs()) != len(ipattern):
                 return False, None
         else:
-            if len(node.input_values()) < len(ipattern):
+            if len(node.inputs()) < len(ipattern):
                 return False, None
 
         inputs = []
-        for p, n in zip(ipattern, node.input_values()[:len(ipattern)]):
+        for p, n in zip(ipattern, node.inputs()[:len(ipattern)]):
             dag_matcher = DagMatcher(p)
             ret, dag = dag_matcher.MatchDag(
                 onnx_model,

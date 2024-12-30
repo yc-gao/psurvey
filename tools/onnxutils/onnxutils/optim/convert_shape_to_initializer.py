@@ -14,10 +14,10 @@ class _:
             for node in onnx_model.nodes():
                 if node.op_type() != 'Shape':
                     continue
-                if node.output_values()[0] in output_names:
+                if node.outputs()[0] in output_names:
                     continue
 
-                vinfo = onnx_model.get_vinfo_by_name(node.input_values()[0])
+                vinfo = onnx_model.get_vinfo_by_name(node.inputs()[0])
                 if vinfo is None:
                     continue
 
@@ -27,7 +27,7 @@ class _:
                     continue
 
                 sess.add_initializer(OnnxTensor.from_numpy(
-                    np.array(shape, dtype=np.int64), node.output_values[0]).proto)
+                    np.array(shape, dtype=np.int64), node.outputs()[0]).proto)
                 sess.remove_node(node)
 
         return onnx_model

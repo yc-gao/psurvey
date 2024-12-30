@@ -12,14 +12,14 @@ class OnnxSimplifier:
             for node in onnx_model.nodes():
                 if node.op_type() != 'Constant':
                     continue
-                if node.output_values()[0] in output_names:
+                if node.outputs()[0] in output_names:
                     continue
                 val = node.attributes().get('value', None)
                 if val is None:
                     continue
 
-                tensor = val.proto
-                tensor.name = node.output[0]
+                tensor = val.proto()
+                tensor.name = node.outputs()[0]
                 sess.add_initializer(tensor)
                 sess.remove_node(node)
 

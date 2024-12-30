@@ -9,7 +9,7 @@ from .registry import optimizer
 class FoldConstant:
     @staticmethod
     def eval_const_node(onnx_model: OnnxModel, constant_node):
-        onnx_model = onnx_model.extract([], constant_node.output_values())
+        onnx_model = onnx_model.extract([], constant_node.outputs())
         import onnxruntime as ort
         sess = ort.InferenceSession(
             onnx_model.proto().SerializeToString(),
@@ -31,15 +31,15 @@ class FoldConstant:
 
             mutable_nodes = set()
             for node in onnx_model.nodes():
-                if any(x in input_names for x in node.input_values()):
-                    input_names.update(node.output_values())
+                if any(x in input_names for x in node.inputs()):
+                    input_names.update(node.outputs())
                     mutable_nodes.add(node.name())
 
             nodes_to_fold = [
                 x for x in onnx_model.nodes()
                 if x.name() not in mutable_nodes and all(
                     output_name not in output_names
-                    for output_name in x.output_values())]
+                    for output_name in x.outputs())]
 
             for node in nodes_to_fold:
                 sess.add_initializers(

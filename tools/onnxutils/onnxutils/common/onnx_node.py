@@ -34,8 +34,8 @@ class OnnxNode:
     def __init__(self, onnx_node: NodeProto):
         self._proto = onnx_node
 
-        self._input_values = tuple(self._proto.input)
-        self._output_values = tuple(self._proto.output)
+        self._inputs = tuple(self._proto.input)
+        self._outputs = tuple(self._proto.output)
 
     def proto(self):
         return self._proto
@@ -49,11 +49,11 @@ class OnnxNode:
     def op_type(self):
         return self._proto.op_type
 
-    def input_values(self):
-        return self._input_values
+    def inputs(self):
+        return self._inputs
 
-    def output_values(self):
-        return self._output_values
+    def outputs(self):
+        return self._outputs
 
     def attributes(self):
         return {
