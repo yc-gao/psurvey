@@ -15,6 +15,10 @@ class InitializersContainer(torch.nn.Module):
         raise RuntimeError('Got unexpected "forward" on constant container')
 
 
+def normalize_module_name(name, domain='', op_type=''):
+    return (f'{domain}/' + (name.replace('.', '/') or op_type)).lstrip('/')
+
+
 def convert(
     onnx_model: OnnxModel,
     keep_input_names: bool = True,
@@ -52,7 +56,8 @@ def convert(
 
         torch_module, onnx_mapping = converter(onnx_node, onnx_model)
         setattr(torch_module, 'onnx_mapping', onnx_mapping)
-        root_module.add_module(onnx_node.name(), torch_module)
+        root_module.add_module(normalize_module_name(
+            onnx_node.name()), torch_module)
 
         args = []
         for value_name in onnx_mapping.inputs:
@@ -87,7 +92,7 @@ def convert(
                     f'Got unexpected input value type ({value_type})')
 
         torch_nodes[onnx_node.name()] = torch_graph.call_module(
-            module_name=onnx_node.name(), args=tuple(args))
+            module_name=normalize_module_name(onnx_node.name()), args=tuple(args))
 
     torch_graph.output(
         [torch_nodes[onnx_model.get_node_by_output(output_name)]
