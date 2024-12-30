@@ -5,6 +5,7 @@ from . import activations
 from . import identity
 from . import conv
 from . import binary_math_operations
+from . import unary_math_operations
 from . import resize
 from . import max_pool
 from . import gather
