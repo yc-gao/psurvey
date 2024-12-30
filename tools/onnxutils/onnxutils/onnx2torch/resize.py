@@ -53,7 +53,7 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
     if scales is not None:
         scales = scales.to_numpy().tolist()
         assert scales[:2] == [1, 1], "not implement"
-        scales = scales[2:]
+        scales = tuple(scales[2:])
         torch_mode = mode_mapping[(mode, len(scales))]
 
     sizes = onnx_model.get_initializer_by_name(
@@ -64,7 +64,7 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
         shape = [x.dim_value if x.HasField(
             'dim_value') else -1 for x in vinfo.type.tensor_type.shape.dim]
         assert sizes[:2] == shape[:2], "not implement"
-        sizes = sizes[2:]
+        sizes = tuple(sizes[2:])
         torch_mode = mode_mapping[(mode, len(sizes))]
 
     if coordinate_transformation_mode == 'asymmetric':
@@ -78,8 +78,8 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
             warnings.warn('results might differ significantly!')
         return OperationConverterResult(
             torch_module=nn.Upsample(
-                size=tuple(sizes),
-                scale_factor=tuple(scales),
+                size=sizes,
+                scale_factor=scales,
                 mode=torch_mode,
             ),
             onnx_mapping=OnnxMapping(
