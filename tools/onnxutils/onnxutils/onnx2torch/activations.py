@@ -13,3 +13,11 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
         torch_module=nn.ReLU(),
         onnx_mapping=onnx_mapping_from_node(onnx_node),
     )
+
+
+@converter(operation_type='Sigmoid', version=13)
+def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
+    return OperationConverterResult(
+        torch_module=nn.Sigmoid(),
+        onnx_mapping=onnx_mapping_from_node(onnx_node),
+    )
