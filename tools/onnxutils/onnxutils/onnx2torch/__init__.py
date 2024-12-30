@@ -24,3 +24,4 @@ from . import grid_sample
 from . import reduce_mean
 from . import expand
 from . import softmax
+from . import reduce_sum
