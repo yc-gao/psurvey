@@ -19,5 +19,5 @@ class TorchIdentity(nn.Module, OnnxToTorchModule):
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  # pylint: disable=unused-argument
     return OperationConverterResult(
         torch_module=TorchIdentity(),
-        onnx_mapping=onnx_mapping_from_node(node=onnx_node),
+        onnx_mapping=onnx_mapping_from_node(onnx_node),
     )

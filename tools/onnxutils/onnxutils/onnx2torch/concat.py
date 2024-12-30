@@ -22,5 +22,5 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
     axis = onnx_node.attributes().get('axis')
     return OperationConverterResult(
         torch_module=TorchConcat(axis),
-        onnx_mapping=onnx_mapping_from_node(node=onnx_node),
+        onnx_mapping=onnx_mapping_from_node(onnx_node),
     )

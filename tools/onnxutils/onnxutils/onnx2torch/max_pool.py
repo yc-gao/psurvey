@@ -36,5 +36,5 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
     )
     return OperationConverterResult(
         torch_module=torch_module,
-        onnx_mapping=onnx_mapping_from_node(node=onnx_node),
+        onnx_mapping=onnx_mapping_from_node(onnx_node),
     )

@@ -28,6 +28,11 @@ def main():
             raise RuntimeError(f"can not find '{x}' optimizer, ignore")
         onnx_model = optimizer.apply(onnx_model)
 
+    with onnx_model.session() as sess:
+        for node in onnx_model.proto().graph.node:
+            if node.name == '':
+                node.name = sess.unique_name()
+
     torch_module = convert(onnx_model)
 
 
