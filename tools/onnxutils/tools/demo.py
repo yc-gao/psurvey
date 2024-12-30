@@ -16,7 +16,10 @@ def main():
     options = parse_options()
     onnx_model = OnnxModel.from_file(options.model)
 
-    optimizers = ['convert-constant-to-initializer']
+    optimizers = [
+        'convert-constant-to-initializer',
+        'convert-shape-to-initializer',
+    ]
     for x in optimizers:
         optimizer = find_optimizer(x)
         if optimizer is None:

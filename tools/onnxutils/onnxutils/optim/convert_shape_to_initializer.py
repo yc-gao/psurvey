@@ -27,7 +27,7 @@ class _:
                     continue
 
                 sess.add_initializer(OnnxTensor.from_numpy(
-                    np.array(shape, dtype=np.int64), node.outputs()[0]).proto)
+                    np.array(shape, dtype=np.int64), node.outputs()[0]).proto())
                 sess.remove_node(node)
 
         return onnx_model
