@@ -15,3 +15,4 @@ from . import transpose
 from . import matmul
 from . import split
 from . import clip
+from . import squeeze
