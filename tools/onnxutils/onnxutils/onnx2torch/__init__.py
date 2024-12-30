@@ -5,3 +5,4 @@ from . import activations
 from . import identity
 from . import conv
 from . import binary_math_operations
+from . import resize
