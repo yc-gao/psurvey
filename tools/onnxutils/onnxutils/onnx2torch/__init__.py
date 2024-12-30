@@ -27,3 +27,4 @@ from . import softmax
 from . import reduce_sum
 from . import where
 from . import flatten
+from . import gemm
