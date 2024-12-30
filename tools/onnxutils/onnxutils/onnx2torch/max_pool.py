@@ -24,7 +24,8 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
     storage_order = onnx_node.attributes().get('storage_order', 0)
 
     assert auto_pad == "NOTSET", "not implement"
-    assert pads[:len(kernel_shape)] == [0] * len(kernel_shape), "not implement"
+    assert pads[:len(kernel_shape)] == pads[len(
+        kernel_shape):], "not implement"
     assert storage_order == 0, "not implement"
 
     torch_module = op_mapping[len(kernel_shape)](
