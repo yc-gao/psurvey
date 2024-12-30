@@ -10,6 +10,8 @@ from .utils import OnnxToTorchModule, OperationConverterResult, onnx_mapping_fro
 
 func_mapping = {
     'Add': torch.add,
+    'Sub': torch.sub,
+    'Mul': torch.mul,
     'Div': torch.div,
     'Div_int': lambda a, b: torch.div(a, b, rounding_mode='trunc'),
     'Greater': torch.gt,
@@ -29,6 +31,8 @@ class TorchBinaryOp(nn.Module, OnnxToTorchModule):
 @converter(operation_type='Greater', version=13)
 @converter(operation_type='Less', version=13)
 @converter(operation_type='Add', version=14)
+@converter(operation_type='Sub', version=14)
+@converter(operation_type='Mul', version=14)
 @converter(operation_type='Div', version=14)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
     op_type = onnx_node.op_type()
