@@ -18,3 +18,4 @@ from . import split
 from . import clip
 from . import squeeze
 from . import cast
+from . import scatter_nd
