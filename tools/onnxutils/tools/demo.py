@@ -19,6 +19,8 @@ def main():
     optimizers = [
         'convert-constant-to-initializer',
         'convert-shape-to-initializer',
+        'onnx-simplifier',
+        'convert-shape-to-initializer',
     ]
     for x in optimizers:
         optimizer = find_optimizer(x)
