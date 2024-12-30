@@ -1,12 +1,6 @@
-from typing import NamedTuple
-
 from onnx import defs
 
-
-class OperationDescription(NamedTuple):
-    domain: str
-    operation_type: str
-    version: int
+from .utils import OperationDescription
 
 
 _CONVERTER_REGISTRY = {}
