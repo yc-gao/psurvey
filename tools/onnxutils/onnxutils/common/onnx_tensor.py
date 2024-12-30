@@ -28,4 +28,4 @@ class OnnxTensor:
         return onnx.numpy_helper.to_array(self._proto)
 
     def to_torch(self) -> torch.Tensor:
-        return torch.from_numpy(self.to_numpy())
+        return torch.from_numpy(self.to_numpy().copy())

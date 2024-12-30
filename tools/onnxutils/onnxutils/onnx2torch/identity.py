@@ -1,4 +1,3 @@
-import torch
 from torch import nn
 
 
@@ -9,6 +8,9 @@ from .utils import OnnxToTorchModule, OperationConverterResult, onnx_mapping_fro
 
 
 class TorchIdentity(nn.Module, OnnxToTorchModule):
+    def __init__(self):
+        super().__init__()
+
     def forward(self, x):
         return x
 
