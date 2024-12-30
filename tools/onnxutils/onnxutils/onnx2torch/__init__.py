@@ -25,3 +25,4 @@ from . import reduce_mean
 from . import expand
 from . import softmax
 from . import reduce_sum
+from . import where
