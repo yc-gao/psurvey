@@ -11,6 +11,7 @@ from .utils import OnnxToTorchModule, OperationConverterResult, onnx_mapping_fro
 func_mapping = {
     'Abs': torch.abs,
     'Sqrt': torch.sqrt,
+    'Atan': torch.atan,
 }
 
 
@@ -25,6 +26,7 @@ class TorchUnaryOp(nn.Module, OnnxToTorchModule):
 
 @converter(operation_type='Abs', version=13)
 @converter(operation_type='Sqrt', version=13)
+@converter(operation_type='Atan', version=7)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
     return OperationConverterResult(
         torch_module=TorchUnaryOp(func_mapping[onnx_node.op_type()]),

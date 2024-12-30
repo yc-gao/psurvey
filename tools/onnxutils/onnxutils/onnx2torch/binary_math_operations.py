@@ -14,8 +14,11 @@ func_mapping = {
     'Mul': torch.mul,
     'Div': torch.div,
     'Div_int': lambda a, b: torch.div(a, b, rounding_mode='trunc'),
+    'Pow': torch.pow,
     'Greater': torch.gt,
     'Less': torch.lt,
+    'And': torch.logical_and,
+    'LessOrEqual': torch.le,
 }
 
 
@@ -30,12 +33,14 @@ class TorchBinaryOp(nn.Module, OnnxToTorchModule):
 
 @converter(operation_type='Greater', version=13)
 @converter(operation_type='Less', version=13)
+@converter(operation_type='LessOrEqual', version=16)
+@converter(operation_type='And', version=7)
 @converter(operation_type='Add', version=14)
 @converter(operation_type='Sub', version=14)
 @converter(operation_type='Mul', version=14)
 @converter(operation_type='Div', version=14)
+@converter(operation_type='Pow', version=15)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
-    print(onnx_node.name())
     op_type = onnx_node.op_type()
     if op_type == 'Div':
         inputs = [
