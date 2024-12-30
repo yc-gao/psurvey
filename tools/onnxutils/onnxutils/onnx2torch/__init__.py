@@ -13,3 +13,4 @@ from . import reshape
 from . import slice
 from . import transpose
 from . import matmul
+from . import split
