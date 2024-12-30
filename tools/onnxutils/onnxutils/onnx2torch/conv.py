@@ -17,6 +17,8 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
     strides = onnx_node.attributes().get('strides')
 
     assert auto_pad == 'NOTSET', "not implement"
+    assert pads[:len(kernel_shape)] == pads[len(
+        kernel_shape):], "not implement"
 
     if len(kernel_shape) == 2:
         weight = onnx_model.get_initializer_by_name(
@@ -31,7 +33,7 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
             weight.shape[0],
             kernel_shape,
             strides,
-            pads,
+            pads[len(kernel_shape):],
             dilations,
             group,
             bias is not None
