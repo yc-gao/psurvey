@@ -25,8 +25,8 @@ class OperationConverterResult(NamedTuple):
     onnx_mapping: OnnxMapping
 
 
-def onnx_mapping_from_node(node: OnnxNode) -> OnnxMapping:
+def onnx_mapping_from_node(onnx_node: OnnxNode) -> OnnxMapping:
     return OnnxMapping(
-        inputs=node.inputs(),
-        outputs=node.outputs(),
+        inputs=onnx_node.inputs(),
+        outputs=onnx_node.outputs(),
     )
