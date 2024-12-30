@@ -21,3 +21,4 @@ from . import cast
 from . import scatter_nd
 from . import unsqueeze
 from . import grid_sample
+from . import reduce_mean
