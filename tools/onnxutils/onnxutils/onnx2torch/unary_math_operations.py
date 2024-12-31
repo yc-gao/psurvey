@@ -13,6 +13,7 @@ func_mapping = {
     'Neg': torch.neg,
     'Sqrt': torch.sqrt,
     'Exp': torch.exp,
+    'Floor': torch.floor,
     'Atan': torch.atan,
     'Cos': torch.cos,
     'Sin': torch.sin,
@@ -32,6 +33,7 @@ class TorchUnaryOp(nn.Module, OnnxToTorchModule):
 @converter(operation_type='Neg', version=13)
 @converter(operation_type='Sqrt', version=13)
 @converter(operation_type='Exp', version=13)
+@converter(operation_type='Floor', version=13)
 @converter(operation_type='Atan', version=7)
 @converter(operation_type='Cos', version=7)
 @converter(operation_type='Sin', version=7)
