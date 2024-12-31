@@ -2,7 +2,7 @@
 import argparse
 
 from onnxutils.common import OnnxModel
-from onnxutils.optim import find_optimizer
+from onnxutils.optim import apply_optimizers
 
 
 def parse_options():
@@ -17,11 +17,7 @@ def main():
     options = parse_options()
 
     onnx_model = OnnxModel.from_file(options.model)
-    for x in options.optim:
-        optimizer = find_optimizer(x)
-        if optimizer is None:
-            raise RuntimeError(f"can not find '{x}' optimizer, ignore")
-        onnx_model = optimizer.apply(onnx_model)
+    onnx_model = apply_optimizers(options.optim)
 
     if options.output:
         onnx_model.save(options.output)

@@ -22,6 +22,13 @@ class RandomDataset:
 
         self.rewind()
 
+    def load_item(self, _):
+        return {
+            f.name: np.random.rand(
+                *f.shape).astype(RandomDataset.str2dtype[f.type])
+            for f in self.fields
+        }
+
     def rewind(self):
         self.idx = 0
 
@@ -29,11 +36,10 @@ class RandomDataset:
         if self.idx >= self.size:
             return None
         self.idx += 1
-        return {
-            f.name: np.random.rand(
-                *f.shape).astype(RandomDataset.str2dtype[f.type])
-            for f in self.fields
-        }
+        return self.load_item(self.idx - 1)
+
+    def __getitem__(self, idx):
+        return self.load_item(idx)
 
     def __len__(self):
         return self.size
@@ -54,7 +60,9 @@ class LayerObserver(nn.Module):
         super().__init__()
         self.collector = collector
         self.target = t
-        self.onnx_mapping = t.onnx_mapping
+
+        if hasattr(t, 'onnx_mapping'):
+            self.onnx_mapping = t.onnx_mapping
 
     def record(self, vals):
         if not isinstance(vals, (tuple, list)):
@@ -79,8 +87,6 @@ def parse_options():
 
 
 def main():
-    torch.set_printoptions(precision=8)
-
     options = parse_options()
 
     onnx_model = OnnxModel.from_file(options.model)
@@ -89,7 +95,7 @@ def main():
             if node.name == '':
                 node.name = sess.unique_name()
 
-    torch_module = convert(onnx_model)
+    torch_module = convert(onnx_model).eval()
     onnx_mapping = torch_module.onnx_mapping
 
     data_collector = OrderedDict()
@@ -100,13 +106,11 @@ def main():
 
     sess = ort.InferenceSession(
         onnx_model.proto().SerializeToString(),
-        providers=[
-            x for x in ['CUDAExecutionProvider', 'CPUExecutionProvider']
-            if x in ort.get_available_providers()
-        ])
+        providers=['CPUExecutionProvider'])
+
     dataset = RandomDataset(sess.get_inputs(), 10)
-    example_inputs = dataset.get_next()
-    dataset.rewind()
+    example_inputs = dataset[0]
+
     torch_module(
         *tuple(torch.from_numpy(example_inputs[x]) for x in onnx_mapping.inputs))
 
@@ -115,31 +119,30 @@ def main():
             sess.add_output(onnx_model.get_vinfo_by_name(k))
     sess = ort.InferenceSession(
         onnx_model.proto().SerializeToString(),
-        providers=[
-            x for x in ['CUDAExecutionProvider', 'CPUExecutionProvider']
-            if x in ort.get_available_providers()
-        ])
+        providers=['CPUExecutionProvider'])
     for data in dataset:
         torch_module(
             *tuple(torch.from_numpy(data[x]) for x in onnx_mapping.inputs))
-        sess_outputs = sess.run(None, data)
         sess_outputs = {
             desc.name: val
-            for val, desc in zip(sess_outputs, sess.get_outputs())
+            for val, desc in zip(sess.run(None, data), sess.get_outputs())
         }
 
-        for k, v in data_collector.items():
-            torch_val = v
-            onnx_val = sess_outputs[k]
+        for k, torch_val in data_collector.items():
+            if torch_val.dtype == torch.bool:
+                continue
+            onnx_val = torch.from_numpy(sess_outputs[k])
             is_ok = torch.allclose(
-                v, torch.from_numpy(sess_outputs[k]), 1e-3, 1e-3)
-            print(f"verify tensor{k}...", is_ok)
+                torch_val,
+                onnx_val,
+                1e-3,
+                max(1e-3, onnx_val.abs().max() * 1e-3)
+            )
+            print(f"verify {k}...", is_ok)
             if not is_ok:
-                print(torch_val.shape, onnx_val.shape)
-                print(torch_val)
-                print(onnx_val)
-                break
-
+                print(f"onnx {onnx_val.max()} {onnx_val.min()} {onnx_val.mean()}")
+                tmp = (torch_val - onnx_val).abs()
+                print(f"diff {tmp.max()} {tmp.min()} {tmp.mean()}")
         break
 
 

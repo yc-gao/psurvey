@@ -1,5 +1,6 @@
 from .registry import find_optimizer
 from .dag_matcher import DagMatcher
+from .utils import apply_optimizers
 
 from . import onnx_simplifier
 from . import convert_constant_to_initializer
