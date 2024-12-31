@@ -38,8 +38,11 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
         onnx_node.inputs()[2]).to_numpy().tolist()
     axes = onnx_model.get_initializer_by_name(
         onnx_node.inputs()[3]).to_numpy().tolist()
-    steps = onnx_model.get_initializer_by_name(
-        onnx_node.inputs()[4]).to_numpy().tolist()
+
+    steps = [1] * len(axes)
+    if len(onnx_node.inputs()) >= 5:
+        steps = onnx_model.get_initializer_by_name(
+            onnx_node.inputs()[4]).to_numpy().tolist()
 
     return OperationConverterResult(
         torch_module=TorchSlice(starts, ends, axes, steps),
