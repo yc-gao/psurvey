@@ -5,6 +5,7 @@ import torch
 from onnxutils.common import OnnxModel, OnnxNode
 
 from .registry import find_converter
+from .utils import OnnxMapping
 
 
 class InitializersContainer(torch.nn.Module):
@@ -56,8 +57,10 @@ def convert(
 
         torch_module, onnx_mapping = converter(onnx_node, onnx_model)
         setattr(torch_module, 'onnx_mapping', onnx_mapping)
-        root_module.add_module(normalize_module_name(
-            onnx_node.name()), torch_module)
+        root_module.add_module(
+            normalize_module_name(onnx_node.name()),
+            torch_module
+        )
 
         args = []
         for value_name in onnx_mapping.inputs:
@@ -101,4 +104,10 @@ def convert(
 
     torch_graph.lint()
     torch_model = torch.fx.GraphModule(root=root_module, graph=torch_graph)
+    setattr(torch_model,
+            'onnx_mapping',
+            OnnxMapping(
+                inputs=tuple(x.name for x in onnx_model.inputs()),
+                outputs=tuple(x.name for x in onnx_model.outputs()),
+            ))
     return torch_model

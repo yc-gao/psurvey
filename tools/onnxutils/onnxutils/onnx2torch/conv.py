@@ -78,6 +78,7 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
                 outputs=onnx_node.outputs(),
             )
         )
+    raise NotImplementedError()
 
 
 @converter(operation_type='ConvTranspose', version=11)
@@ -127,3 +128,4 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
                 outputs=onnx_node.outputs(),
             )
         )
+    raise NotImplementedError()
