@@ -31,7 +31,7 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
     return OperationConverterResult(
         torch_module=TorchClip(min_val, max_val),
         onnx_mapping=OnnxMapping(
-            inputs=onnx_node.inputs(),
+            inputs=onnx_node.inputs()[:1],
             outputs=onnx_node.outputs(),
         ),
     )
