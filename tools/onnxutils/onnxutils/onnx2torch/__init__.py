@@ -28,3 +28,4 @@ from . import reduce_sum
 from . import where
 from . import flatten
 from . import gemm
+from . import pad
