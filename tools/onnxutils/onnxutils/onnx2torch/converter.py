@@ -95,7 +95,7 @@ def convert(
             module_name=normalize_module_name(onnx_node.name()), args=tuple(args))
 
     torch_graph.output(
-        [torch_nodes[onnx_model.get_node_by_output(output_name)]
+        [torch_nodes[onnx_model.get_node_by_output(output_name).name()]
             for output_name in onnx_model.output_names()
          ])
 
