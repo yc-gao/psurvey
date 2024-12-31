@@ -33,3 +33,4 @@ from . import batch_norm
 from . import arg_max
 from . import reduce_max
 from . import cum_sum
+from . import depth_to_space
