@@ -89,9 +89,8 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
     pads = onnx_node.attributes().get('pads')
     strides = onnx_node.attributes().get('strides')
 
-    output_padding = onnx_node.attributes().get('output_padding', None)
+    output_padding = onnx_node.attributes().get('output_padding', 0)
     output_shape = onnx_node.attributes().get('output_shape', None)
-    assert output_padding is None
     assert output_shape is None
 
     assert auto_pad == 'NOTSET', "not implement"
@@ -112,6 +111,7 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
             kernel_shape,
             strides,
             pads[len(kernel_shape):],
+            output_padding=output_padding,
             groups=group,
             bias=bias is not None,
             dilation=dilations,
