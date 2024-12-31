@@ -120,7 +120,7 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
             warnings.warn('results might differ significantly!')
         if extrapolation_value != 0:
             warnings.warn('results might differ significantly!')
-        if mode == 'linear':
+        if mode != 'linear':
             warnings.warn('results might differ significantly!')
         assert sizes and len(sizes) == 2, "not implement"
         return OperationConverterResult(
