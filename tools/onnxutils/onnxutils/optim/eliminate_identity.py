@@ -14,6 +14,6 @@ class _:
                     continue
                 if node.outputs()[0] in output_names:
                     continue
-                sess.remap_inputs(
+                sess.remap_node_inputs(
                     {node.outputs()[0]: node.inputs()[0]})
         return onnx_model

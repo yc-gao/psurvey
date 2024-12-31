@@ -141,13 +141,15 @@ class OnnxModel:
 
                 self._counter = 0
 
-                self._remap_inputs = {}
+                self._remap_node_inputs = {}
 
                 self._initializers_to_remove = []
                 self._initializers_to_add = []
 
                 self._nodes_to_remove = []
                 self._nodes_to_add = []
+
+                self._outputs_to_add = []
 
             def unique_name(self):
                 while True:
@@ -176,8 +178,11 @@ class OnnxModel:
             def remove_node(self, node: OnnxNode):
                 self._nodes_to_remove.append(node)
 
-            def remap_inputs(self, remap):
-                self._remap_inputs.update(remap)
+            def remap_node_inputs(self, remap):
+                self._remap_node_inputs.update(remap)
+
+            def add_output(self, output):
+                self._outputs_to_add.append(output)
 
             def __enter__(self):
                 return self
@@ -190,7 +195,7 @@ class OnnxModel:
                 for node in onnx_model.graph.node:
                     for idx in range(len(node.input)):
                         while True:
-                            new_value = self._remap_inputs.get(
+                            new_value = self._remap_node_inputs.get(
                                 node.input[idx], None)
                             if new_value is None:
                                 break
@@ -204,6 +209,8 @@ class OnnxModel:
                 onnx_model.graph.initializer.extend(
                     self._initializers_to_add)
                 onnx_model.graph.node.extend(self._nodes_to_add)
+
+                onnx_model.graph.output.extend(self._outputs_to_add)
 
                 e = Extractor(onnx_model)
                 new_model = e.extract_model(
