@@ -16,7 +16,7 @@ op_mapping = {
 @converter(operation_type='MaxPool', version=12)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  # pylint: disable=unused-argument
     auto_pad = onnx_node.attributes().get('auto_pad', 'NOTSET')
-    ceil_mode = onnx_node.attributes().get('ceil_mode', 0)
+    ceil_mode = bool(onnx_node.attributes().get('ceil_mode', 0))
     kernel_shape = onnx_node.attributes().get('kernel_shape')
     pads = onnx_node.attributes().get('pads')
     strides = onnx_node.attributes().get('strides')

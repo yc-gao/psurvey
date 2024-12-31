@@ -18,13 +18,13 @@ class TorchSlice(nn.Module, OnnxToTorchModule):
     def forward(self, x):
         for start, end, axis, step in zip(self.starts, self.ends, self.axes, self.steps):
             if axis == 0:
-                x = x[start:end:step, :]
+                x = x[start:end:step]
             elif axis == 1:
-                x = x[:, start:end:step, :]
+                x = x[:, start:end:step]
             elif axis == 2:
-                x = x[:, :, start:end:step, :]
+                x = x[:, :, start:end:step]
             elif axis == 3:
-                x = x[:, :, :, start:end:step, :]
+                x = x[:, :, :, start:end:step]
             else:
                 raise NotImplementedError()
         return x

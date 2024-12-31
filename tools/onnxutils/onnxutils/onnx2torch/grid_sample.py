@@ -1,4 +1,3 @@
-import torch
 from torch import nn
 
 
@@ -27,7 +26,7 @@ class TorchGridSample(nn.Module, OnnxToTorchModule):
 
 @converter(operation_type='GridSample', version=16)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
-    align_corners = onnx_node.attributes().get('align_corners', 0)
+    align_corners = bool(onnx_node.attributes().get('align_corners', 0))
     mode = onnx_node.attributes().get('mode', 'bilinear')
     padding_mode = onnx_node.attributes().get('padding_mode', 'zeros')
 

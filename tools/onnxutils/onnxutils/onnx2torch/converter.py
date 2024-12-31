@@ -36,8 +36,13 @@ def convert(
 
     torch_graph = torch.fx.Graph()
 
+    root_mapping = OnnxMapping(
+        inputs=tuple(x for x in sorted(onnx_model.input_names())),
+        outputs=tuple(x for x in sorted(onnx_model.output_names())),
+    )
+
     # create input nodes
-    for idx, name in enumerate(onnx_model.input_names(), 1):
+    for idx, name in enumerate(root_mapping.inputs, 1):
         if keep_input_names:
             if not name.isidentifier():
                 raise ValueError(
@@ -99,15 +104,13 @@ def convert(
 
     torch_graph.output(
         [torch_nodes[onnx_model.get_node_by_output(output_name).name()]
-            for output_name in onnx_model.output_names()
+            for output_name in root_mapping.outputs
          ])
 
     torch_graph.lint()
     torch_model = torch.fx.GraphModule(root=root_module, graph=torch_graph)
     setattr(torch_model,
             'onnx_mapping',
-            OnnxMapping(
-                inputs=tuple(x.name for x in onnx_model.inputs()),
-                outputs=tuple(x.name for x in onnx_model.outputs()),
-            ))
+            root_mapping
+            )
     return torch_model
