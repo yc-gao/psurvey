@@ -9,11 +9,9 @@ from .utils import OnnxToTorchModule, OperationConverterResult, OnnxMapping
 
 
 class TorchCumSum(nn.Module, OnnxToTorchModule):
-    def __init__(self, axis, exclusive, reverse):
+    def __init__(self, axis):
         super().__init__()
         self.axis = axis
-        self.exclusive = exclusive
-        self.reverse = reverse
 
     def forward(self, x):
         return torch.cumsum(x, self.axis)
@@ -31,7 +29,7 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
         onnx_node.inputs()[1]).to_numpy())
 
     return OperationConverterResult(
-        torch_module=TorchCumSum(axis, exclusive, reverse),
+        torch_module=TorchCumSum(axis),
         onnx_mapping=OnnxMapping(
             inputs=onnx_node.inputs()[:1],
             outputs=onnx_node.outputs(),

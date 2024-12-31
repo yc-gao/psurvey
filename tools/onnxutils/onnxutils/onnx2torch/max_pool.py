@@ -28,7 +28,8 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
         kernel_shape):], "not implement"
     assert storage_order == 0, "not implement"
 
-    torch_module = op_mapping[len(kernel_shape)](
+    torch_cls = op_mapping[len(kernel_shape)]
+    torch_module = torch_cls(
         kernel_shape,
         strides,
         pads[len(kernel_shape):],

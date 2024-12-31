@@ -131,5 +131,4 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
             ),
         )
     else:
-        print(onnx_node.name())
         raise NotImplementedError()

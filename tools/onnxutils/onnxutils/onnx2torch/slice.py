@@ -17,7 +17,9 @@ class TorchSlice(nn.Module, OnnxToTorchModule):
 
     def forward(self, x):
         for start, end, axis, step in zip(self.starts, self.ends, self.axes, self.steps):
-            if axis == 0:
+            if axis == -1:
+                x = x[..., start:end:step]
+            elif axis == 0:
                 x = x[start:end:step]
             elif axis == 1:
                 x = x[:, start:end:step]
@@ -25,15 +27,13 @@ class TorchSlice(nn.Module, OnnxToTorchModule):
                 x = x[:, :, start:end:step]
             elif axis == 3:
                 x = x[:, :, :, start:end:step]
-            elif axis == -1:
-                x = x[..., start:end:step]
             else:
-                raise NotImplementedError()
+                raise NotImplementedError
         return x
 
 
 @converter(operation_type='Slice', version=13)
-def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  # pylint: disable=unused-argument
+def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
     starts = onnx_model.get_initializer_by_name(
         onnx_node.inputs()[1]).to_numpy().tolist()
     ends = onnx_model.get_initializer_by_name(

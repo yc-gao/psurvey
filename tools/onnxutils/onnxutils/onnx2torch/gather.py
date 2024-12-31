@@ -9,13 +9,15 @@ from .utils import OnnxToTorchModule, OperationConverterResult, OnnxMapping
 
 
 class TorchGather(nn.Module, OnnxToTorchModule):
-    def __init__(self, indices, axis):
+    def __init__(self, axis, indices):
         super().__init__()
-        self.indices = indices
         self.axis = axis
+        self.indices = indices
 
     def forward(self, x):
-        if self.axis == 0:
+        if self.axis == -1:
+            return x[..., self.indices]
+        elif self.axis == 0:
             return x[self.indices]
         elif self.axis == 1:
             return x[:, self.indices]
@@ -26,7 +28,7 @@ class TorchGather(nn.Module, OnnxToTorchModule):
         elif self.axis == 4:
             return x[:, :, :, :, self.indices]
         else:
-            raise NotImplementedError(f"gather at {self.axis} not supported")
+            raise NotImplementedError
 
 
 @converter(operation_type='Gather', version=13)
@@ -36,7 +38,7 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
         onnx_node.inputs()[1]).to_numpy().tolist()
 
     return OperationConverterResult(
-        torch_module=TorchGather(indices, axis),
+        torch_module=TorchGather(axis, indices),
         onnx_mapping=OnnxMapping(
             inputs=onnx_node.inputs()[:1],
             outputs=onnx_node.outputs(),

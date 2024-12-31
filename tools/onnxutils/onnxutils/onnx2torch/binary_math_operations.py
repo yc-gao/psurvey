@@ -3,7 +3,7 @@ import torch
 from torch import nn
 
 
-from onnxutils.common import OnnxModel, OnnxNode
+from onnxutils.common import OnnxModel, OnnxNode, OnnxTensor
 
 from .registry import converter
 from .utils import OnnxToTorchModule, OperationConverterResult, onnx_mapping_from_node
@@ -49,13 +49,16 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
             onnx_model.get_vinfo_by_name(x)
             for x in onnx_node.inputs()
         ]
-        for idx, input_name in enumerate(onnx_node.inputs()):
-            if inputs[idx] is None:
-                tensor = onnx_model.get_initializer_by_name(input_name)
-                if tensor is not None:
-                    inputs[idx] = tensor.proto().data_type
-            else:
-                inputs[idx] = inputs[idx].type.tensor_type.elem_type
+        inputs = [
+            onnx_model.get_initializer_by_name(x)
+            if x is None else x.type.tensor_type.elem_type
+            for x in inputs
+        ]
+        inputs = [
+            x.proto().data_type
+            if isinstance(x, OnnxTensor) else x
+            for x in inputs
+        ]
 
         integer_types = (
             onnx.TensorProto.DataType.UINT8,
