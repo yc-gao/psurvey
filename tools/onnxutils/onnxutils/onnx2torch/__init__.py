@@ -30,3 +30,4 @@ from . import flatten
 from . import gemm
 from . import pad
 from . import batch_norm
+from . import arg_max
