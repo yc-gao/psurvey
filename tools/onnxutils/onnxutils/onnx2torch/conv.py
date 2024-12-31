@@ -49,3 +49,32 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
                 outputs=onnx_node.outputs(),
             )
         )
+    elif len(kernel_shape) == 1:
+        weight = onnx_model.get_initializer_by_name(
+            onnx_node.inputs()[1]).to_torch()
+        bias = None
+        if len(onnx_node.inputs()) > 2:
+            bias = onnx_model.get_initializer_by_name(
+                onnx_node.inputs()[2]).to_torch()
+
+        torch_module = nn.Conv1d(
+            weight.shape[1],
+            weight.shape[0],
+            kernel_shape,
+            strides,
+            pads[len(kernel_shape):],
+            dilations,
+            group,
+            bias is not None
+        )
+        torch_module.weight.data = weight
+        if bias is not None:
+            torch_module.bias.data = bias
+
+        return OperationConverterResult(
+            torch_module=torch_module,
+            onnx_mapping=OnnxMapping(
+                inputs=onnx_node.inputs()[:1],
+                outputs=onnx_node.outputs(),
+            )
+        )
