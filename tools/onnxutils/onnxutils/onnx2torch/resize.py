@@ -36,6 +36,16 @@ class TorchResize(nn.Module, OnnxToTorchModule):
         return x
 
 
+class TorchResize1(nn.Module, OnnxToTorchModule):
+    def __init__(self,  sizes):
+        super().__init__()
+        self.sizes = sizes
+
+    def forward(self, x):
+        x = nn.functional.upsample_bilinear(x, self.sizes)
+        return x
+
+
 # TODO: yinchao check later
 @converter(operation_type='Resize', version=13)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  # pylint: disable=unused-argument
@@ -103,5 +113,23 @@ def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:  
                 outputs=onnx_node.outputs(),
             ),
         )
+    elif coordinate_transformation_mode == 'align_corners':
+        if cubic_coeff_a != -0.75:
+            warnings.warn('results might differ significantly!')
+        if exclude_outside != 0:
+            warnings.warn('results might differ significantly!')
+        if extrapolation_value != 0:
+            warnings.warn('results might differ significantly!')
+        if mode == 'linear':
+            warnings.warn('results might differ significantly!')
+        assert sizes and len(sizes) == 2, "not implement"
+        return OperationConverterResult(
+            torch_module=TorchResize1(sizes),
+            onnx_mapping=OnnxMapping(
+                inputs=onnx_node.inputs()[:1],
+                outputs=onnx_node.outputs(),
+            ),
+        )
     else:
+        print(onnx_node.name())
         raise NotImplementedError()
