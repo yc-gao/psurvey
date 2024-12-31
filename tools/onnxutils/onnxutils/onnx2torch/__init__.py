@@ -29,3 +29,4 @@ from . import where
 from . import flatten
 from . import gemm
 from . import pad
+from . import batch_norm
