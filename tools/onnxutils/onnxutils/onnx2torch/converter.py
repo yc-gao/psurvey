@@ -102,10 +102,16 @@ def convert(
         torch_nodes[onnx_node.name()] = torch_graph.call_module(
             module_name=normalize_module_name(onnx_node.name()), args=tuple(args))
 
-    torch_graph.output(
-        [torch_nodes[onnx_model.get_node_by_output(output_name).name()]
-            for output_name in root_mapping.outputs
-         ])
+    if len(onnx_mapping.outputs) > 1:
+        torch_graph.output(
+            [torch_nodes[onnx_model.get_node_by_output(output_name).name()]
+                for output_name in root_mapping.outputs
+             ])
+    else:
+        output_name = root_mapping.outputs[0]
+        torch_graph.output(
+            torch_nodes[onnx_model.get_node_by_output(output_name).name()]
+        )
 
     torch_graph.lint()
     torch_model = torch.fx.GraphModule(root=root_module, graph=torch_graph)
