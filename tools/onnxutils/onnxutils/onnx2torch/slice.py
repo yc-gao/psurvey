@@ -25,6 +25,8 @@ class TorchSlice(nn.Module, OnnxToTorchModule):
                 x = x[:, :, start:end:step]
             elif axis == 3:
                 x = x[:, :, :, start:end:step]
+            elif axis == -1:
+                x = x[..., start:end:step]
             else:
                 raise NotImplementedError()
         return x

@@ -19,8 +19,9 @@ class TorchExpand(nn.Module, OnnxToTorchModule):
 
 @converter(operation_type='Expand', version=13)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
-    shape = onnx_model.get_initializer_by_name(
-        onnx_node.inputs()[1]).to_numpy().tolist()
+    vinfo = onnx_model.get_vinfo_by_name(onnx_node.outputs()[0])
+    shape = [x.dim_value if x.HasField(
+        'dim_value') else -1 for x in vinfo.type.tensor_type.shape.dim]
 
     return OperationConverterResult(
         torch_module=TorchExpand(shape),

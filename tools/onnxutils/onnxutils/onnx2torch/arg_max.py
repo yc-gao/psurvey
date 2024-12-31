@@ -21,10 +21,11 @@ class TorchArgMax(nn.Module, OnnxToTorchModule):
 @converter(operation_type='ArgMax', version=13)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
     axis = onnx_node.attributes().get('axis', 0)
-    keepdims = onnx_node.attributes().get('keepdims', 1)
-    select_last_index = onnx_node.attributes().get('select_last_index', 0)
+    keepdims = bool(onnx_node.attributes().get('keepdims', 1))
+    select_last_index = bool(
+        onnx_node.attributes().get('select_last_index', 0))
 
-    assert select_last_index == 0, 'not implement'
+    assert select_last_index == False, 'not implement'
 
     return OperationConverterResult(
         torch_module=TorchArgMax(axis, keepdims),

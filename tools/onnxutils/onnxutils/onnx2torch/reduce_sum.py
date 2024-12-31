@@ -9,37 +9,38 @@ from .utils import OnnxToTorchModule, OperationConverterResult, OnnxMapping
 
 
 class TorchReduceSum(nn.Module, OnnxToTorchModule):
-    def __init__(self, axes, keepdims, noop_with_empty_axes):
+    def __init__(self, axis, keepdims, noop_with_empty_axes):
         super().__init__()
-        self.axes = axes
+        self.axis = axis
         self.keepdims = keepdims
         self.noop_with_empty_axes = noop_with_empty_axes
 
     def forward(self, x):
-        if self.axes is None:
+        if self.axis is None:
             if self.noop_with_empty_axes:
                 return x
             else:
                 return torch.sum(x)
         else:
-            return torch.sum(x, self.axes, self.keepdims)
+            return torch.sum(x, dim=self.axis, keepdim=self.keepdims)
 
 
 @converter(operation_type='ReduceSum', version=13)
 def _(onnx_node: OnnxNode, onnx_model: OnnxModel) -> OperationConverterResult:
-    keepdims = onnx_node.attributes().get('keepdims', 1)
-    noop_with_empty_axes = onnx_node.attributes().get('noop_with_empty_axes', 0)
+    keepdims = bool(onnx_node.attributes().get('keepdims', 1))
+    noop_with_empty_axes = bool(
+        onnx_node.attributes().get('noop_with_empty_axes', 0))
 
-    axes = onnx_model.get_initializer_by_name(
+    axis = onnx_model.get_initializer_by_name(
         onnx_node.inputs()[1]) if len(onnx_node.inputs()) > 1 else None
 
-    if axes is not None:
-        axes = int(axes.to_numpy())
+    if axis is not None:
+        axis = int(axis.to_numpy())
 
     return OperationConverterResult(
-        torch_module=TorchReduceSum(axes, keepdims, noop_with_empty_axes),
+        torch_module=TorchReduceSum(axis, keepdims, noop_with_empty_axes),
         onnx_mapping=OnnxMapping(
-            inputs=onnx_node.inputs(),
+            inputs=onnx_node.inputs()[:1],
             outputs=onnx_node.outputs(),
         ),
     )
