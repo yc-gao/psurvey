@@ -47,3 +47,12 @@ def compute_cosine(real, pred, reduction='none'):
         return cosine_sim
     else:
         raise NotImplementedError
+
+
+def compute_metric(metric, *args, **kwargs):
+    if metric == 'mse':
+        return compute_mse(*args, **kwargs)
+    elif metric == 'cosine':
+        return compute_cosine(*args, **kwargs)
+    else:
+        raise NotImplementedError

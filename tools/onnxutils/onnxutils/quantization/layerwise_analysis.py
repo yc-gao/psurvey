@@ -1,14 +1,9 @@
 from tqdm import tqdm
 
-from .utils import LayerObserver, compute_mse, compute_cosine
+from .utils import LayerObserver, compute_metric
 
 
-def layerwise_analyse(model, quantized_model, dataset, metrics=['mse', 'cosine']):
-    metric_to_func = {
-        'mse': compute_mse,
-        'cosine': compute_cosine,
-    }
-
+def layerwise_analyse(model, quantized_model, dataloader, metrics=['mse', 'cosine']):
     model_recorder = {}
     for name, m in model.named_children():
         if isinstance(m, LayerObserver):
@@ -18,8 +13,7 @@ def layerwise_analyse(model, quantized_model, dataset, metrics=['mse', 'cosine']
         setattr(model, name, LayerObserver(m, model_recorder))
 
     results = []
-    for idx in tqdm(range(len(dataset))):
-        data = dataset[idx]
+    for data in tqdm(dataloader):
         for k, val in zip(model.onnx_mapping.inputs, data):
             model_recorder[k] = val
         model(*data)
@@ -42,7 +36,10 @@ def layerwise_analyse(model, quantized_model, dataset, metrics=['mse', 'cosine']
                     result[name] = None
                     continue
                 result[name] = [
-                    metric_to_func[metric](real, pred)
+                    compute_metric(metric, real, pred)
                     for metric in metrics]
+
         results.append(result)
+        model_recorder.clear()
+
     return results

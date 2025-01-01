@@ -1,14 +1,9 @@
 from tqdm import tqdm
 
-from .utils import LayerObserver, compute_mse, compute_cosine
+from .utils import LayerObserver, compute_metric
 
 
-def graphwise_analyse(model0, model1, dataset, metrics=['mse', 'cosine']):
-    metric_to_func = {
-        'mse': compute_mse,
-        'cosine': compute_cosine,
-    }
-
+def graphwise_analyse(model0, model1, dataloader, metrics=['mse', 'cosine']):
     model0_recorder = {}
     for name, m in model0.named_children():
         if isinstance(m, LayerObserver):
@@ -26,8 +21,7 @@ def graphwise_analyse(model0, model1, dataset, metrics=['mse', 'cosine']):
         setattr(model1, name, LayerObserver(m, model1_recorder))
 
     results = []
-    for idx in tqdm(range(len(dataset))):
-        data = dataset[idx]
+    for data in tqdm(dataloader):
         model0(*data)
         model1(*data)
 
@@ -41,7 +35,7 @@ def graphwise_analyse(model0, model1, dataset, metrics=['mse', 'cosine']):
                 continue
 
             result[name] = [
-                metric_to_func[metric](val0, val1)
+                compute_metric(metric, val0, val1)
                 for metric in metrics]
         results.append(result)
 
