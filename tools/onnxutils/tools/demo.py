@@ -67,14 +67,8 @@ def quantize_model(model, dataloader, is_qat=False):
         weight=NoopObserver
     )
     conv2d_qconfig = QConfig(
-        activation=HistogramObserver.with_args(reduce_range=True),
-        weight=MinMaxObserver.with_args(
-            dtype=torch.qint8,
-            qscheme=torch.per_tensor_symmetric,
-            quant_min=-128,
-            quant_max=127,
-            eps=2**-12
-        )
+        activation=torch.ao.quantization.observer.default_observer,
+        weight=torch.ao.quantization.observer.default_weight_observer
     )
     qconfig_mapping = (QConfigMapping()
                        .set_global(none_qconfig)
@@ -125,13 +119,13 @@ def main():
             if node.name == '':
                 node.name = sess.unique_name()
 
-    torch_model = convert(onnx_model).cuda()
+    torch_model = convert(onnx_model)
     onnx_mapping = torch_model.onnx_mapping
 
     dataset = UnimodelDataset(options.dataset_path)
     dataset = DatasetTransformer(dataset,
                                  lambda item: tuple(
-                                     item[x].cuda()
+                                     item[x]
                                      for x in onnx_mapping.inputs
                                  ))
     dataloader = DataLoader(dataset, batch_size=None)
