@@ -82,14 +82,17 @@ def quantize_model(model, dataloader, is_qat=False):
     prepare_custom_config = PrepareCustomConfig()
     prepare_custom_config.set_non_traceable_module_classes([TorchScatterNd])
 
+    model.eval()
     model_prepared = prepare_fx(
-        model.eval(),
+        model,
         qconfig_mapping,
         dataloader.dataset[0],
         prepare_custom_config
     )
-    for idx in tqdm(range(1)):
-        model_prepared(*dataloader.dataset[idx])
+    model_prepared.eval()
+    with torch.no_grad():
+        for idx in tqdm(range(1)):
+            model_prepared(*dataloader.dataset[idx])
 
     # for data in tqdm(dataloader):
     #     model_prepared(*data)
