@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 
 from onnxutils.common import OnnxModel, DatasetTransformer
 from onnxutils.onnx2torch import convert
@@ -47,40 +48,41 @@ class UnimodelDataset:
         return self.load_item(os.path.join(self.root_dir, str(idx)))
 
 
-def quantize_model(model, dataset, is_qat=False):
+def quantize_model(model, dataloader, is_qat=False):
     assert not is_qat
 
-    from torch.utils.data import DataLoader
     from torch.ao.quantization.quantize_fx import prepare_fx, convert_fx
-    from torch.ao.quantization.fx.custom_config import PrepareCustomConfig
     from torch.ao.quantization.qconfig_mapping import QConfigMapping, get_default_qconfig_mapping
     from torch.ao.quantization.qconfig import QConfig
     from torch.ao.quantization.observer import ReuseInputObserver, NoopObserver, HistogramObserver, MinMaxObserver
 
-    from onnxutils.onnx2torch.scatter_nd import TorchScatterNd
+    # default_qconfig = QConfig(
+    #     activation=ReuseInputObserver,
+    #     weight=NoopObserver
+    # )
+    # qconfig_conv2d = QConfig(
+    #     activation=HistogramObserver.with_args(reduce_range=True),
+    #     weight=MinMaxObserver.with_args(
+    #         dtype=torch.qint8,
+    #         qscheme=torch.per_tensor_symmetric,
+    #         quant_min=-127,
+    #         quant_max=127,
+    #         eps=2**-12
+    #     )
+    # )
+    # qconfig_mapping = (QConfigMapping()
+    #                    .set_global(default_qconfig)
+    #                    .set_object_type(torch.nn.Conv1d, qconfig_conv2d)
+    #                    .set_object_type(torch.nn.BatchNorm1d, qconfig_conv2d)
+    #                    .set_object_type(torch.nn.Conv2d, qconfig_conv2d)
+    #                    .set_object_type(torch.nn.BatchNorm2d, qconfig_conv2d)
+    #                    .set_object_type(torch.nn.ReLU, qconfig_conv2d)
+    #                    )
 
-    default_qconfig = QConfig(
-        activation=ReuseInputObserver,
-        weight=NoopObserver
-    )
-    qconfig_conv2d = QConfig(
-        activation=HistogramObserver.with_args(reduce_range=True),
-        weight=MinMaxObserver.with_args(
-            dtype=torch.qint8,
-            qscheme=torch.per_tensor_symmetric,
-            quant_min=-127,
-            quant_max=127,
-            eps=2**-12
-        )
-    )
-    qconfig_mapping = (QConfigMapping()
-                       .set_global(default_qconfig)
-                       .set_object_type(torch.nn.Conv1d, qconfig_conv2d)
-                       .set_object_type(torch.nn.BatchNorm1d, qconfig_conv2d)
-                       .set_object_type(torch.nn.Conv2d, qconfig_conv2d)
-                       .set_object_type(torch.nn.BatchNorm2d, qconfig_conv2d)
-                       .set_object_type(torch.nn.ReLU, qconfig_conv2d)
-                       )
+    qconfig_mapping = get_default_qconfig_mapping()
+
+    from torch.ao.quantization.fx.custom_config import PrepareCustomConfig
+    from onnxutils.onnx2torch.scatter_nd import TorchScatterNd
 
     prepare_custom_config = PrepareCustomConfig()
     prepare_custom_config.set_non_traceable_module_classes([TorchScatterNd])
@@ -88,13 +90,13 @@ def quantize_model(model, dataset, is_qat=False):
     model_prepared = prepare_fx(
         model.eval(),
         qconfig_mapping,
-        dataset[0],
+        dataloader.dataset[0],
         prepare_custom_config
     )
     for idx in tqdm(range(10)):
-        model_prepared(*dataset[idx])
+        model_prepared(*dataloader.dataset[idx])
 
-    # for data in tqdm(DataLoader(dataset, batch_size=0)):
+    # for data in tqdm(dataloader):
     #     model_prepared(*data)
 
     model_converted = convert_fx(model_prepared)
@@ -122,21 +124,22 @@ def main():
             if node.name == '':
                 node.name = sess.unique_name()
 
-    torch_model = convert(onnx_model).cuda()
+    torch_model = convert(onnx_model)
     onnx_mapping = torch_model.onnx_mapping
 
     dataset = UnimodelDataset(options.dataset_path)
     dataset = DatasetTransformer(dataset,
                                  lambda item: tuple(
-                                     item[x].cuda()
+                                     item[x]
                                      for x in onnx_mapping.inputs
                                  ))
+    dataloader = DataLoader(dataset, batch_size=None)
 
-    model_quantized = quantize_model(torch_model, dataset)
+    model_quantized = quantize_model(torch_model, dataloader)
     if options.output:
         torch.onnx.export(
             model_quantized,
-            dataset[0],
+            dataloader.dataset[0],
             options.output,
             input_names=onnx_mapping.inputs,
             output_names=onnx_mapping.outputs,
