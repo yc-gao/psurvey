@@ -56,32 +56,31 @@ def quantize_model(model, dataloader, is_qat=False):
     from torch.ao.quantization.qconfig import QConfig
     from torch.ao.quantization.observer import ReuseInputObserver, NoopObserver, HistogramObserver, MinMaxObserver
 
+    from onnxutils.onnx2torch.converter import normalize_module_name
+
+    none_qconfig = QConfig(
+        activation=NoopObserver,
+        weight=NoopObserver
+    )
     default_qconfig = QConfig(
         activation=ReuseInputObserver,
         weight=NoopObserver
     )
+    conv2d_qconfig = QConfig(
+        activation=HistogramObserver.with_args(reduce_range=True),
+        weight=MinMaxObserver.with_args(
+            dtype=torch.qint8,
+            qscheme=torch.per_tensor_symmetric,
+            quant_min=-128,
+            quant_max=127,
+            eps=2**-12
+        )
+    )
     qconfig_mapping = (QConfigMapping()
-                       .set_global(default_qconfig))
-
-    # qconfig_conv2d = QConfig(
-    #     activation=HistogramObserver.with_args(reduce_range=True),
-    #     weight=MinMaxObserver.with_args(
-    #         dtype=torch.qint8,
-    #         qscheme=torch.per_tensor_symmetric,
-    #         quant_min=-127,
-    #         quant_max=127,
-    #         eps=2**-12
-    #     )
-    # )
-    # qconfig_mapping = (QConfigMapping()
-    #                    .set_global(default_qconfig)
-    #                    .set_object_type(torch.nn.Conv1d, qconfig_conv2d)
-    #                    .set_object_type(torch.nn.BatchNorm1d, qconfig_conv2d)
-    #                    .set_object_type(torch.nn.Conv2d, qconfig_conv2d)
-    #                    .set_object_type(torch.nn.BatchNorm2d, qconfig_conv2d)
-    #                    .set_object_type(torch.nn.ReLU, qconfig_conv2d)
-    #                    )
-    # qconfig_mapping = get_default_qconfig_mapping()
+                       .set_global(none_qconfig)
+                       .set_module_name(normalize_module_name('/backbone/stage2/stage2.1/conv/conv.0/conv/Conv'), conv2d_qconfig)
+                       .set_module_name(normalize_module_name('/backbone/stage2/stage2.1/conv/conv.0/act/Relu'), conv2d_qconfig)
+                       )
 
     from torch.ao.quantization.fx.custom_config import PrepareCustomConfig
     from onnxutils.onnx2torch.scatter_nd import TorchScatterNd
@@ -95,7 +94,7 @@ def quantize_model(model, dataloader, is_qat=False):
         dataloader.dataset[0],
         prepare_custom_config
     )
-    for idx in tqdm(range(10)):
+    for idx in tqdm(range(1)):
         model_prepared(*dataloader.dataset[idx])
 
     # for data in tqdm(dataloader):
