@@ -30,9 +30,7 @@ def convert(
     root_initializer = InitializersContainer()
     root_module = torch.nn.Module()
     root_module.add_module('initializers', root_initializer)
-    torch_nodes = {
-        '': root_module
-    }
+    torch_nodes = {}
 
     torch_graph = torch.fx.Graph()
 
@@ -102,7 +100,7 @@ def convert(
         torch_nodes[onnx_node.name()] = torch_graph.call_module(
             module_name=normalize_module_name(onnx_node.name()), args=tuple(args))
 
-    if len(onnx_mapping.outputs) > 1:
+    if len(root_mapping.outputs) > 1:
         torch_graph.output(
             [torch_nodes[onnx_model.get_node_by_output(output_name).name()]
                 for output_name in root_mapping.outputs

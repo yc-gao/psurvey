@@ -88,7 +88,8 @@ def main():
             model_quantized,
             dataset[0],
             options.output,
-            input_names=onnx_mapping.inputs
+            input_names=onnx_mapping.inputs,
+            output_names=onnx_mapping.outputs,
         )
 
 
