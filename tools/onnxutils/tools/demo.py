@@ -133,7 +133,6 @@ def main():
                                  ))
 
     model_quantized = quantize_model(torch_model, dataset)
-
     if options.output:
         torch.onnx.export(
             model_quantized,
