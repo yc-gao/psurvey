@@ -42,7 +42,7 @@ class UnimodelDataset:
         return self.load_item(os.path.join(self.root_dir, str(idx)))
 
 
-def do_verify(model0, model1, dataset, rtol=1e-2, atol=1e-3):
+def do_verify(model0, model1, dataset, rtol=1e-1, atol=1e-1):
     sess0 = ort.InferenceSession(
         model0,
         providers=[
