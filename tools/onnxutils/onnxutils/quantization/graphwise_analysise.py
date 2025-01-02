@@ -25,7 +25,7 @@ def graphwise_analyse(model0, model1, dataloader, metrics=['snr', 'mse', 'cosine
         model0(*data)
         model1(*data)
 
-        result = {}
+        result = []
         for name in (model0_recorder.keys() | model1_recorder.keys()):
             val0 = model0_recorder.get(name, None)
             val1 = model1_recorder.get(name, None)
@@ -33,13 +33,22 @@ def graphwise_analyse(model0, model1, dataloader, metrics=['snr', 'mse', 'cosine
             if val0 is None or val1 is None:
                 continue
 
-            result[name] = {
+            stat = {
                 metric: compute_metric(metric, val0, val1, **kwargs)
                 for metric in metrics
             }
-        results.append(result)
+            stat['name'] = name
+            result.append(stat)
 
+        results.append(result)
         model0_recorder.clear()
         model1_recorder.clear()
+
+    for name, m in model0.named_children():
+        if isinstance(m, LayerObserver):
+            setattr(model0, name, m.target_layer())
+    for name, m in model1.named_children():
+        if isinstance(m, LayerObserver):
+            setattr(model1, name, m.target_layer())
 
     return results

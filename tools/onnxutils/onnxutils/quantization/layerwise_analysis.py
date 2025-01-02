@@ -18,7 +18,7 @@ def layerwise_analyse(model, quantized_model, dataloader, metrics=['snr', 'mse',
             model_recorder[k] = val
         model(*data)
 
-        result = {}
+        result = []
         for layer in quantized_model.children():
             if not hasattr(layer, 'onnx_mapping'):
                 continue
@@ -35,12 +35,18 @@ def layerwise_analyse(model, quantized_model, dataloader, metrics=['snr', 'mse',
                 if pred is None or real is None:
                     continue
 
-                result[name] = {
+                stat = {
                     metric: compute_metric(metric, real, pred, **kwargs)
                     for metric in metrics
                 }
+                stat['name'] = name
+                result.append(stat)
 
         results.append(result)
         model_recorder.clear()
+
+    for name, m in model.named_children():
+        if isinstance(m, LayerObserver):
+            setattr(model, name, m.target_layer())
 
     return results

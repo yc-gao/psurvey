@@ -10,6 +10,9 @@ class LayerObserver(torch.nn.Module):
         if hasattr(self._layer, 'onnx_mapping'):
             self.onnx_mapping = self._layer.onnx_mapping
 
+    def target_layer(self):
+        return self._layer
+
     def update(self, vals):
         if not isinstance(vals, (tuple, list)):
             vals = (vals, )
@@ -94,6 +97,6 @@ def compute_metric(metric, *args, **kwargs):
         val = compute_snr(*args, **kwargs)
     else:
         raise NotImplementedError
-    if val.ndim == 0:
+    if val.nelement == 1:
         return val.item()
     return val.detach().cpu().numpy().tolist()
