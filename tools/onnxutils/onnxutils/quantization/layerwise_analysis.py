@@ -3,7 +3,7 @@ from tqdm import tqdm
 from .utils import LayerObserver, compute_metric
 
 
-def layerwise_analyse(model, quantized_model, dataloader, metrics=['mse', 'cosine']):
+def layerwise_analyse(model, quantized_model, dataloader, metrics=['snr', 'mse', 'cosine'], **kwargs):
     model_recorder = {}
     for name, m in model.named_children():
         if isinstance(m, LayerObserver):
@@ -33,11 +33,12 @@ def layerwise_analyse(model, quantized_model, dataloader, metrics=['mse', 'cosin
                 real = model_recorder.get(name, None)
                 pred = val
                 if pred is None or real is None:
-                    result[name] = None
                     continue
-                result[name] = [
-                    compute_metric(metric, real, pred)
-                    for metric in metrics]
+
+                result[name] = {
+                    metric: compute_metric(metric, real, pred, **kwargs)
+                    for metric in metrics
+                }
 
         results.append(result)
         model_recorder.clear()

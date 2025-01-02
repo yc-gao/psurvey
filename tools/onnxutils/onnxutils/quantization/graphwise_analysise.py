@@ -3,7 +3,7 @@ from tqdm import tqdm
 from .utils import LayerObserver, compute_metric
 
 
-def graphwise_analyse(model0, model1, dataloader, metrics=['mse', 'cosine']):
+def graphwise_analyse(model0, model1, dataloader, metrics=['snr', 'mse', 'cosine'], **kwargs):
     model0_recorder = {}
     for name, m in model0.named_children():
         if isinstance(m, LayerObserver):
@@ -31,12 +31,12 @@ def graphwise_analyse(model0, model1, dataloader, metrics=['mse', 'cosine']):
             val1 = model1_recorder.get(name, None)
 
             if val0 is None or val1 is None:
-                result[name] = None
                 continue
 
-            result[name] = [
-                compute_metric(metric, val0, val1)
-                for metric in metrics]
+            result[name] = {
+                metric: compute_metric(metric, val0, val1, **kwargs)
+                for metric in metrics
+            }
         results.append(result)
 
         model0_recorder.clear()
