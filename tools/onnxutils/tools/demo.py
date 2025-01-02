@@ -91,11 +91,9 @@ def quantize_model(model, dataloader, is_qat=False):
     )
     model_prepared.eval()
     with torch.no_grad():
-        for idx in tqdm(range(1)):
-            model_prepared(*dataloader.dataset[idx])
-
-    # for data in tqdm(dataloader):
-    #     model_prepared(*data)
+        for data in tqdm(dataloader):
+            model_prepared(*data)
+            break
 
     model_converted = convert_fx(model_prepared)
     return model_converted
