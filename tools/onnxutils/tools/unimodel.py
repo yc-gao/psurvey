@@ -93,7 +93,6 @@ def quantize_model(model, dataloader, is_qat=False):
     with torch.no_grad():
         for data in tqdm(dataloader):
             model_prepared(*data)
-            break
 
     model_converted = convert_fx(model_prepared)
     return model_converted
@@ -131,6 +130,7 @@ def main():
                                  ))
     dataloader = DataLoader(dataset, batch_size=None)
 
+    # model_quantized = torch_model
     model_quantized = quantize_model(torch_model, dataloader)
     if options.output:
         torch.onnx.export(
