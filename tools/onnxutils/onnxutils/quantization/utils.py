@@ -23,7 +23,10 @@ class LayerObserver(torch.nn.Module):
 
 
 def compute_mse(real, pred, reduction='none'):
-    mse = torch.pow(real - pred, 2).flatten(start_dim=1).mean(dim=-1)
+    real = real.flatten(start_dim=1).float()
+    pred = pred.flatten(start_dim=1).float()
+
+    mse = torch.pow(real - pred, 2).mean(dim=-1)
     if reduction == 'mean':
         return mse.mean()
     elif reduction == 'sum':
