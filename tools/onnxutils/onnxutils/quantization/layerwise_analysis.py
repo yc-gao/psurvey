@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-from .utils import LayerObserver, compute_metric
+from .utils import LayerObserver, compute_metrics
 
 
 def layerwise_analyse(model, quantized_model, dataloader, metrics=['snr', 'mse', 'cosine'], **kwargs):
@@ -35,10 +35,7 @@ def layerwise_analyse(model, quantized_model, dataloader, metrics=['snr', 'mse',
                 if pred is None or real is None:
                     continue
 
-                stat = {
-                    metric: compute_metric(metric, real, pred, **kwargs)
-                    for metric in metrics
-                }
+                stat = compute_metrics(metrics, real, pred, **kwargs)
                 stat['name'] = name
                 result.append(stat)
 

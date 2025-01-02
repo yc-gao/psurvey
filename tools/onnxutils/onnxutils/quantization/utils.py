@@ -88,15 +88,17 @@ def compute_snr(real, pred, reduction='none'):
         raise NotImplementedError
 
 
-def compute_metric(metric, *args, **kwargs):
-    if metric == 'mse':
-        val = compute_mse(*args, **kwargs)
-    elif metric == 'cosine':
-        val = compute_cosine(*args, **kwargs)
-    elif metric == 'snr':
-        val = compute_snr(*args, **kwargs)
-    else:
-        raise NotImplementedError
-    if val.nelement == 1:
-        return val.item()
-    return val.detach().cpu().numpy().tolist()
+def compute_metrics(metrics, *args, **kwargs):
+    def compute(metric, *args, **kwargs):
+        if metric == 'mse':
+            val = compute_mse(*args, **kwargs)
+        elif metric == 'cosine':
+            val = compute_cosine(*args, **kwargs)
+        elif metric == 'snr':
+            val = compute_snr(*args, **kwargs)
+        else:
+            raise NotImplementedError
+        if val.nelement == 1:
+            return val.item()
+        return val.detach().cpu().numpy().tolist()
+    return {m: compute(m, *args, **kwargs) for m in metrics}

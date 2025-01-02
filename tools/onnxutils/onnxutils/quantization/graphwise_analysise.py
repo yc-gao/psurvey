@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-from .utils import LayerObserver, compute_metric
+from .utils import LayerObserver, compute_metrics
 
 
 def graphwise_analyse(model0, model1, dataloader, metrics=['snr', 'mse', 'cosine'], **kwargs):
@@ -33,10 +33,7 @@ def graphwise_analyse(model0, model1, dataloader, metrics=['snr', 'mse', 'cosine
             if val0 is None or val1 is None:
                 continue
 
-            stat = {
-                metric: compute_metric(metric, val0, val1, **kwargs)
-                for metric in metrics
-            }
+            stat = compute_metrics(metrics, val0, val1, **kwargs)
             stat['name'] = name
             result.append(stat)
 
