@@ -22,7 +22,7 @@ class TorchScatterNdFunc(torch.autograd.Function):
 
     @staticmethod
     def symbolic(g: torch.Graph, data, indices, updates) -> torch.Value:
-        return g.op("ScatterND", data, indices, updates, outputs=1, opset_version=16)
+        return g.op("ScatterND", data, indices, updates, outputs=1)
 
 
 class TorchScatterNd(nn.Module, OnnxToTorchModule):
