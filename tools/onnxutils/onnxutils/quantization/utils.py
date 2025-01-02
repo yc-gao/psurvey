@@ -1,3 +1,5 @@
+import copy
+
 import torch
 
 
@@ -37,6 +39,10 @@ def compute_mse(real, pred, reduction='none'):
     mse = torch.pow(real - pred, 2).mean(dim=-1)
     if reduction == 'mean':
         return mse.mean()
+    if reduction == 'max':
+        return mse.max()
+    if reduction == 'min':
+        return mse.min()
     elif reduction == 'sum':
         return mse.sum()
     elif reduction == 'none':
@@ -57,6 +63,10 @@ def compute_cosine(real, pred, reduction='none'):
     cosine_sim = torch.cosine_similarity(real, pred, dim=-1)
     if reduction == 'mean':
         return cosine_sim.mean()
+    if reduction == 'max':
+        return cosine_sim.max()
+    if reduction == 'min':
+        return cosine_sim.min()
     elif reduction == 'sum':
         return cosine_sim.sum()
     elif reduction == 'none':
@@ -80,6 +90,10 @@ def compute_snr(real, pred, reduction='none'):
     snr = (noise_power) / (signal_power + 1e-7)
     if reduction == 'mean':
         return snr.mean()
+    if reduction == 'max':
+        return snr.max()
+    if reduction == 'min':
+        return snr.min()
     elif reduction == 'sum':
         return snr.sum()
     elif reduction == 'none':
@@ -102,3 +116,13 @@ def compute_metrics(metrics, *args, **kwargs):
             return val.item()
         return val.detach().cpu().numpy().tolist()
     return {m: compute(m, *args, **kwargs) for m in metrics}
+
+
+def print_stats(stats, sorted_metric, reversed_order):
+    stats = copy.deepcopy(stats)
+    for stat in stats:
+        stat = sorted(
+            stat, key=lambda x: x[sorted_metric], reverse=reversed_order)
+        for tensor_stat in stat:
+            name = tensor_stat.pop('name')
+            print(name, tensor_stat)

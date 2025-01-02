@@ -11,14 +11,15 @@ def layerwise_analyse(model, quantized_model, dataloader, metrics=['snr', 'mse',
         if not hasattr(m, 'onnx_mapping'):
             continue
         setattr(model, name, LayerObserver(m, model_recorder))
+    model = LayerObserver(model, model_recorder)
 
-    results = []
+    stats = []
     for data in tqdm(dataloader):
         for k, val in zip(model.onnx_mapping.inputs, data):
             model_recorder[k] = val
         model(*data)
 
-        result = []
+        batch_stat = []
         for layer in quantized_model.children():
             if not hasattr(layer, 'onnx_mapping'):
                 continue
@@ -35,15 +36,16 @@ def layerwise_analyse(model, quantized_model, dataloader, metrics=['snr', 'mse',
                 if pred is None or real is None:
                     continue
 
-                stat = compute_metrics(metrics, real, pred, **kwargs)
-                stat['name'] = name
-                result.append(stat)
+                tensor_stat = compute_metrics(metrics, real, pred, **kwargs)
+                tensor_stat['name'] = name
+                batch_stat.append(tensor_stat)
 
-        results.append(result)
+        stats.append(batch_stat)
         model_recorder.clear()
 
+    model = model.target_layer()
     for name, m in model.named_children():
         if isinstance(m, LayerObserver):
             setattr(model, name, m.target_layer())
 
-    return results
+    return stats
