@@ -5,22 +5,10 @@ from .utils import LayerObserver, compute_metrics
 
 def graphwise_analyse(model0, model1, dataloader, metrics=['snr', 'mse', 'cosine'], **kwargs):
     model0_recorder = {}
-    for name, m in model0.named_children():
-        if isinstance(m, LayerObserver):
-            continue
-        if not hasattr(m, 'onnx_mapping'):
-            continue
-        setattr(model0, name, LayerObserver(m, model0_recorder))
-    model0 = LayerObserver(model0, model0_recorder)
+    model0 = LayerObserver.apply(model0, model0_recorder)
 
     model1_recorder = {}
-    for name, m in model1.named_children():
-        if isinstance(m, LayerObserver):
-            continue
-        if not hasattr(m, 'onnx_mapping'):
-            continue
-        setattr(model1, name, LayerObserver(m, model1_recorder))
-    model1 = LayerObserver(model1, model1_recorder)
+    model1 = LayerObserver.apply(model1, model1_recorder)
 
     stats = []
     for data in tqdm(dataloader):
@@ -43,14 +31,7 @@ def graphwise_analyse(model0, model1, dataloader, metrics=['snr', 'mse', 'cosine
         model0_recorder.clear()
         model1_recorder.clear()
 
-    model0 = model0.target_layer()
-    for name, m in model0.named_children():
-        if isinstance(m, LayerObserver):
-            setattr(model0, name, m.target_layer())
-
-    model1 = model1.target_layer()
-    for name, m in model1.named_children():
-        if isinstance(m, LayerObserver):
-            setattr(model1, name, m.target_layer())
+    model0 = LayerObserver.unapply(model0)
+    model1 = LayerObserver.unapply(model1)
 
     return stats

@@ -12,6 +12,25 @@ class LayerObserver(torch.nn.Module):
         if hasattr(self._layer, 'onnx_mapping'):
             self.onnx_mapping = self._layer.onnx_mapping
 
+    @staticmethod
+    def apply(model, recorder):
+        for name, m in model.named_children():
+            if isinstance(m, LayerObserver):
+                continue
+            if not hasattr(m, 'onnx_mapping'):
+                continue
+            setattr(model, name, LayerObserver(m, recorder))
+        return LayerObserver(model, recorder)
+
+    @staticmethod
+    def unapply(model):
+        if isinstance(model, LayerObserver):
+            model = model.target_layer()
+        for name, m in model.named_children():
+            if isinstance(m, LayerObserver):
+                setattr(model, name, m.target_layer())
+        return model
+
     def target_layer(self):
         return self._layer
 

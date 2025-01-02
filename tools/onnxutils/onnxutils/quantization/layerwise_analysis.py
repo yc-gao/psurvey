@@ -5,13 +5,7 @@ from .utils import LayerObserver, compute_metrics
 
 def layerwise_analyse(model, quantized_model, dataloader, metrics=['snr', 'mse', 'cosine'], **kwargs):
     model_recorder = {}
-    for name, m in model.named_children():
-        if isinstance(m, LayerObserver):
-            continue
-        if not hasattr(m, 'onnx_mapping'):
-            continue
-        setattr(model, name, LayerObserver(m, model_recorder))
-    model = LayerObserver(model, model_recorder)
+    model = LayerObserver.apply(model, model_recorder)
 
     stats = []
     for data in tqdm(dataloader):
@@ -43,9 +37,6 @@ def layerwise_analyse(model, quantized_model, dataloader, metrics=['snr', 'mse',
         stats.append(batch_stat)
         model_recorder.clear()
 
-    model = model.target_layer()
-    for name, m in model.named_children():
-        if isinstance(m, LayerObserver):
-            setattr(model, name, m.target_layer())
+    model = LayerObserver.unapply(model)
 
     return stats
