@@ -118,11 +118,12 @@ def compute_metrics(metrics, *args, **kwargs):
     return {m: compute(m, *args, **kwargs) for m in metrics}
 
 
-def print_stats(stats, sorted_metric, reversed_order):
+def print_stats(stats, sorted_metric=None, reversed_order=None):
     stats = copy.deepcopy(stats)
     for stat in stats:
-        stat = sorted(
-            stat, key=lambda x: x[sorted_metric], reverse=reversed_order)
+        if sorted_metric is not None and reversed_order is not None:
+            stat = sorted(
+                stat, key=lambda x: x[sorted_metric], reverse=reversed_order)
         for tensor_stat in stat:
             name = tensor_stat.pop('name')
             print(name, tensor_stat)
