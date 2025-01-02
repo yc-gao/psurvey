@@ -102,9 +102,10 @@ def convert(
 
     if len(root_mapping.outputs) > 1:
         torch_graph.output(
-            [torch_nodes[onnx_model.get_node_by_output(output_name).name()]
+            tuple(
+                torch_nodes[onnx_model.get_node_by_output(output_name).name()]
                 for output_name in root_mapping.outputs
-             ])
+            ))
     else:
         output_name = root_mapping.outputs[0]
         torch_graph.output(
