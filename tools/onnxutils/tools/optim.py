@@ -17,7 +17,7 @@ def main():
     options = parse_options()
 
     onnx_model = OnnxModel.from_file(options.model)
-    onnx_model = apply_optimizers(options.optim)
+    onnx_model = apply_optimizers(onnx_model, options.optim)
 
     if options.output:
         onnx_model.save(options.output)
