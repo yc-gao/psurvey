@@ -1,2 +1,1 @@
 from .graphwise_analysise import graphwise_analyse
-from .layerwise_analysis import layerwise_analyse

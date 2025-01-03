@@ -15,19 +15,13 @@ def graphwise_analyse(model0, model1, dataloader, metrics=['snr', 'mse', 'cosine
         model0(*data)
         model1(*data)
 
-        batch_stat = []
-        for name in (model0_recorder.keys() | model1_recorder.keys()):
-            val0 = model0_recorder.get(name, None)
-            val1 = model1_recorder.get(name, None)
+        stat = compute_metrics(
+            model0_recorder,
+            model1_recorder,
+            metrics,
+            **kwargs)
 
-            if val0 is None or val1 is None:
-                continue
-
-            tensor_stat = compute_metrics(metrics, val0, val1, **kwargs)
-            tensor_stat['name'] = name
-            batch_stat.append(tensor_stat)
-
-        stats.append(batch_stat)
+        stats.append(stat)
         model0_recorder.clear()
         model1_recorder.clear()
 

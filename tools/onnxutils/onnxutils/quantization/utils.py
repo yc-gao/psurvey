@@ -121,20 +121,33 @@ def compute_snr(real, pred, reduction='none'):
         raise NotImplementedError
 
 
-def compute_metrics(metrics, *args, **kwargs):
-    def compute(metric, *args, **kwargs):
+def compute_metrics(recorder0, recorder1, metrics, *args, **kwargs):
+    def compute(val0, val1, metric, *args, **kwargs):
         if metric == 'mse':
-            val = compute_mse(*args, **kwargs)
+            val = compute_mse(val0, val1, *args, **kwargs)
         elif metric == 'cosine':
-            val = compute_cosine(*args, **kwargs)
+            val = compute_cosine(val0, val1, *args, **kwargs)
         elif metric == 'snr':
-            val = compute_snr(*args, **kwargs)
+            val = compute_snr(val0, val1, *args, **kwargs)
         else:
             raise NotImplementedError
         if val.nelement == 1:
             return val.item()
         return val.detach().cpu().numpy().tolist()
-    return {m: compute(m, *args, **kwargs) for m in metrics}
+
+    stat = []
+    for name in (recorder0.keys() & recorder1.keys()):
+        val0 = recorder0.get(name, None)
+        val1 = recorder1.get(name, None)
+        if val0 is None or val1 is None:
+            continue
+
+        tmp = {metric: compute(val0, val1, metric, *args, **kwargs)
+               for metric in metrics}
+        tmp['field'] = name
+        stat.append(tmp)
+
+    return stat
 
 
 def print_stats(stats, sorted_metric=None, reversed_order=None):
@@ -144,5 +157,5 @@ def print_stats(stats, sorted_metric=None, reversed_order=None):
             stat = sorted(
                 stat, key=lambda x: x[sorted_metric], reverse=reversed_order)
         for tensor_stat in stat:
-            name = tensor_stat.pop('name')
+            name = tensor_stat.pop('field')
             print(name, tensor_stat)
