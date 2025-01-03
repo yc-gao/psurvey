@@ -21,6 +21,31 @@ class LayerObserver(torch.nn.Module):
                 setattr(model, name, m.target_layer())
         return model
 
+    @staticmethod
+    def observe(model, *args):
+        class InnerCls:
+            def __init__(self, model, *args):
+                self._recorder = {}
+                self._model = model
+                self._fields = set(args)
+
+            def __enter__(self):
+                for name, m in self._model.named_children():
+                    if isinstance(m, LayerObserver):
+                        continue
+                    if not hasattr(m, 'onnx_mapping'):
+                        continue
+                    if any(x in self._fields for x in m.onnx_mapping.outputs):
+                        setattr(self._model, name,
+                                LayerObserver(m, self._recorder))
+                return self._recorder
+
+            def __exit__(self, exc_type, exc_value, traceback):
+                if exc_value is not None:
+                    raise exc_value
+                LayerObserver.unapply(self._model)
+        return InnerCls(model, *args)
+
     def __init__(self, layer, analyser):
         super().__init__()
         self._layer = layer
