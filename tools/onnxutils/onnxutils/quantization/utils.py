@@ -7,18 +7,22 @@ class LayerObserver(torch.nn.Module):
         for name, m in model.named_children():
             if isinstance(m, LayerObserver):
                 continue
-            if not hasattr(m, 'onnx_mapping'):
-                continue
-            setattr(model, name, LayerObserver(m, recorder))
-        return LayerObserver(model, recorder)
+            m = LayerObserver.apply(m, recorder)
+            setattr(model, name, m)
+
+        if hasattr(model, 'onnx_mapping'):
+            return LayerObserver(model, recorder)
+        return model
 
     @staticmethod
     def unapply(model):
         if isinstance(model, LayerObserver):
             model = model.target_layer()
+
         for name, m in model.named_children():
-            if isinstance(m, LayerObserver):
-                setattr(model, name, m.target_layer())
+            m = LayerObserver.unapply(m)
+            setattr(model, name, m)
+
         return model
 
     @staticmethod
@@ -29,20 +33,22 @@ class LayerObserver(torch.nn.Module):
                 self._model = model
                 self._fields = set(args)
 
-            def __enter__(self):
-                for name, m in self._model.named_children():
-                    if isinstance(m, LayerObserver):
-                        continue
-                    if not hasattr(m, 'onnx_mapping'):
-                        continue
-                    if any(x in self._fields for x in m.onnx_mapping.outputs):
-                        setattr(self._model, name,
-                                LayerObserver(m, self._recorder))
-                return self._recorder
+            def update(self, record):
+                self._recorder.update({
+                    k: v for k, v in record if k in self._fields
+                })
 
-            def __exit__(self, exc_type, exc_value, traceback):
-                if exc_value is not None:
-                    raise exc_value
+            def model(self):
+                return self._model
+
+            def value(self, name):
+                return self._recorder.get(name, None)
+
+            def __enter__(self):
+                self._model = LayerObserver.apply(self._model, self)
+                return self
+
+            def __exit__(self, *args):
                 LayerObserver.unapply(self._model)
         return InnerCls(model, *args)
 

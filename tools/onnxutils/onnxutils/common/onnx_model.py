@@ -187,10 +187,7 @@ class OnnxModel:
             def __enter__(self):
                 return self
 
-            def __exit__(self, exc_type, exc_value, traceback):
-                if exc_value is not None:
-                    raise exc_value
-
+            def __exit__(self, *args):
                 onnx_model = self._onnx_model.proto()
                 for node in onnx_model.graph.node:
                     for idx in range(len(node.input)):
