@@ -130,6 +130,36 @@ class OnnxModel:
             self._name_to_counter[output_value]
             for output_value in name_or_node.outputs())
 
+    def topological_sort(self, is_deterministic=False):
+        node_visited = set()
+        sorted_nodes = []
+
+        def do_sort(arr):
+            if not is_deterministic:
+                return arr
+            if not isinstance(arr, list):
+                arr = [x for x in arr]
+            arr.sort()
+            return arr
+
+        def dfs(node):
+            if node is None:
+                return
+            if node.name() in node_visited:
+                return
+            node_visited.add(node.name())
+            for input_name in do_sort(node.inputs()):
+                dfs(self.get_node_by_output(input_name))
+            sorted_nodes.append(node)
+
+        for output_name in do_sort(self.output_names()):
+            dfs(self.get_node_by_output(output_name))
+
+        model = self._proto
+        model.graph.ClearField("node")
+        model.graph.node.extend([x.proto() for x in sorted_nodes])
+        self.reindex(model)
+
     def extract(self, input_names: list[str], output_names: list[str]):
         e = Extractor(self.proto())
         return OnnxModel(e.extract_model(input_names, output_names))
