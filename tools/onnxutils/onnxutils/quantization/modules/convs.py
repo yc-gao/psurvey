@@ -2,8 +2,10 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from .common import BasicQuantizedModule
 
-class QuantizedConvNd(nn.modules.conv._ConvNd):
+
+class QuantizedConvNd(nn.modules.conv._ConvNd, BasicQuantizedModule):
     @classmethod
     def from_float(cls, float_conv, weight_qparams):
         q_conv = cls(
@@ -24,37 +26,6 @@ class QuantizedConvNd(nn.modules.conv._ConvNd):
         if float_conv.bias is not None:
             q_conv.bias = nn.Parameter(float_conv.bias.detach())
         return q_conv
-
-    def _init_weight_qparams(self, weight_qparams):
-        self.weight_qscheme = weight_qparams['qscheme']
-        self.weight_dtype = weight_qparams['dtype']
-        self.weight_scale = weight_qparams['scale']
-        self.weight_zero_point = weight_qparams['zero_point']
-
-        assert self.weight_qscheme in (torch.per_channel_affine,
-                                       torch.per_tensor_affine,)
-
-        if self.weight_qscheme == torch.per_channel_affine:
-            self.weight_axis_int = weight_qparams['axis']
-
-    def get_weight(self):
-        if self.weight_qscheme == torch.per_channel_affine:
-            weight = torch.quantize_per_channel(
-                self.weight,
-                self.weight_scale,
-                self.weight_zero_point,
-                self.weight_axis_int,
-                self.weight_dtype
-            )
-        else:
-            weight = torch.quantize_per_tensor(
-                self.weight,
-                self.weight_scale,
-                self.weight_zero_point,
-                self.weight_dtype
-            )
-        weight = weight.dequantize()
-        return weight
 
 
 class QuantizedConv1d(QuantizedConvNd, nn.Conv1d):
