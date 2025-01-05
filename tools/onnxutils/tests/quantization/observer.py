@@ -27,12 +27,11 @@ class ObserverTests(unittest.TestCase):
         model.conv2.onnx_mapping = OnnxMapping(
             inputs=tuple(),
             outputs=('conv2',))
-        with LayerObserver.observe(model, 'conv2') as recorder:
+        with LayerObserver.observe(model, 'conv2') as observer:
             for _ in range(10):
                 example_inputs = (torch.rand(1, 3, 224, 224), )
                 val = model(*example_inputs)
-                self.assertTrue('conv2' in recorder)
-                self.assertTrue(torch.allclose(val, recorder['conv2']))
+                self.assertTrue(torch.allclose(val, observer.value('conv2')))
 
 
 if __name__ == '__main__':

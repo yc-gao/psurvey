@@ -35,7 +35,7 @@ class LayerObserver(torch.nn.Module):
 
             def update(self, record):
                 self._recorder.update({
-                    k: v for k, v in record if k in self._fields
+                    k: v for k, v in record.items() if k in self._fields
                 })
 
             def model(self):

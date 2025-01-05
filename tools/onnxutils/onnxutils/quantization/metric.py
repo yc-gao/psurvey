@@ -78,6 +78,31 @@ def compute_snr(real, pred, reduction='none'):
         raise NotImplementedError
 
 
+def compute_max(t):
+    if t.ndim == 1:
+        t = t.unsqueeze(0)
+    t = t.flatten(start_dim=1).float()
+    return t.max(dim=1).values
+
+
+def compute_min(t):
+    if t.ndim == 1:
+        t = t.unsqueeze(0)
+    t = t.flatten(start_dim=1).float()
+    return t.min(dim=1).values
+
+
+def compute_mean(t):
+    if t.ndim == 1:
+        t = t.unsqueeze(0)
+    t = t.flatten(start_dim=1).float()
+    return t.mean(dim=1)
+
+
+def compute_range(t):
+    return compute_max(t) - compute_min(t)
+
+
 def compute_metrics(recorder0, recorder1, metrics, *args, **kwargs):
     def compute(val0, val1, metric, *args, **kwargs):
         if metric == 'mse':
@@ -86,6 +111,16 @@ def compute_metrics(recorder0, recorder1, metrics, *args, **kwargs):
             val = compute_cosine(val0, val1, *args, **kwargs)
         elif metric == 'snr':
             val = compute_snr(val0, val1, *args, **kwargs)
+        elif metric == 'range':
+            val = compute_range(val0)
+        elif metric == 'max':
+            val = compute_max(val0)
+        elif metric == 'min':
+            val = compute_min(val0)
+        elif metric == 'mean':
+            val = compute_mean(val0)
+        elif metric == 'dtype':
+            return val0.dtype
         else:
             raise NotImplementedError
         if val.nelement == 1:
