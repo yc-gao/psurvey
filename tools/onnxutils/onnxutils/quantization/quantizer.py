@@ -3,11 +3,12 @@ import torch
 from torch.ao.quantization.observer import ObserverBase
 from torch.ao.quantization.fake_quantize import FakeQuantizeBase
 
-from .convs import QuantizedConv2d
+from .modules.convs import QuantizedConv1d, QuantizedConv2d
 
 
 class BasicQuantizer:
     _quantized_module_mapping = {
+        torch.ao.nn.qat.modules.conv.Conv1d: QuantizedConv1d,
         torch.ao.nn.qat.modules.conv.Conv2d: QuantizedConv2d
     }
 
