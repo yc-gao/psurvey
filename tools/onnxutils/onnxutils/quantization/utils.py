@@ -2,6 +2,20 @@ import torch
 from torch.ao.quantization.fx.tracer import QuantizationTracer
 
 
+def graph_get_module(graph_module, node, tps=None):
+    if node.op != 'call_module':
+        return None
+    mod = graph_module.get_submodule(node.target)
+    if tps is None:
+        return mod
+
+    if not isinstance(tps, (tuple, list)):
+        tps = (tps,)
+    if not isinstance(mod, tps):
+        return None
+    return mod
+
+
 def get_new_attr_name_with_prefix(module, prefix, idx=0):
     prefix = prefix.replace(".", "_")
 
