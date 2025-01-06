@@ -184,6 +184,7 @@ class OnnxModel:
             def unique_name(self):
                 while True:
                     name = f"random_{uuid.uuid1()}_{self._counter}"
+                    name = name.replace('-', '_')
                     self._counter += 1
                     if self._onnx_model.get_node_by_name(name) is not None:
                         continue
