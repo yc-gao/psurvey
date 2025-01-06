@@ -1,1 +1,1 @@
-from .convs import QuantizedConv1d, QuantizedConv2d
+from .convs import QuantizedConv1d, QuantizedConv2d, QuantizedConv3d
