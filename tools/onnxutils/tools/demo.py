@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 
+
 import torch
 from torch import nn
 
@@ -10,21 +11,12 @@ from torch.ao.quantization.fake_quantize import FakeQuantize
 from onnxutils.quantization.utils import symbolic_trace
 from onnxutils.quantization.quantizer import BasicQuantizer
 
-
-class M(nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.conv0 = nn.Conv2d(3, 3, 3, padding=1)
-        self.conv1 = nn.Conv2d(3, 3, 3, padding=1)
-
-    def forward(self, x):
-        x = self.conv0(x)
-        x = self.conv1(x)
-        return x
+from unimodel_pipeline import ImageNetPipeline
 
 
 def parse_options():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset-path')
     parser.add_argument('-o', '--output')
     return parser.parse_args()
 
@@ -32,28 +24,33 @@ def parse_options():
 def main():
     options = parse_options()
 
-    example_inputs = (torch.rand(1, 3, 224, 224),)
-    module = M()
+    example_inputs = (torch.rand(1, 3, 224, 224).cuda(),)
+    dataloader = ImageNetPipeline.get_dataloader(options.dataset_path)
 
-    graph_module = symbolic_trace(module)
-    graph_module.print_readable()
+    graph_module = torch.hub.load(
+        "pytorch/vision",
+        "resnet50",
+        weights="ResNet50_Weights.IMAGENET1K_V1"
+    )
+    graph_module.cuda()
 
+    ImageNetPipeline.eval(graph_module, dataloader, 'cuda')
+
+    graph_module = symbolic_trace(graph_module)
     quantizer = BasicQuantizer()
     graph_module = quantizer.quantize_modules(graph_module, [
         {
-            'module_name': 'conv0',
+            'module_type': nn.Conv2d,
             'weight': FakeQuantize.with_args(
                 observer=PerChannelMinMaxObserver
             ),
             'activation': FakeQuantize.with_args(observer=HistogramObserver)
         }
     ])
-    graph_module.print_readable()
-
-    graph_module(*example_inputs)
+    ImageNetPipeline.train(graph_module, dataloader, 'cuda')
+    ImageNetPipeline.eval(graph_module, dataloader, 'cuda')
 
     graph_module = quantizer.finalize(graph_module)
-    graph_module.print_readable()
 
     if options.output:
         torch.onnx.export(

@@ -102,7 +102,7 @@ class QuantizedConv1d(QuantizedConvNd, nn.Conv1d):
 class QuantizedConv2d(BasicQuantizedModule, nn.Conv2d):
     @classmethod
     def from_qat(cls, qat_module):
-        return QuantizedConvNd.from_qat(cls, qat_module)
+        return QuantizedConvNd._from_qat(cls, qat_module)
 
     def __init__(
             self,
@@ -154,7 +154,7 @@ class QuantizedConv2d(BasicQuantizedModule, nn.Conv2d):
 class QuantizedConv3d(BasicQuantizedModule, nn.Conv3d):
     @classmethod
     def from_qat(cls, qat_module):
-        return QuantizedConvNd.from_qat(cls, qat_module)
+        return QuantizedConvNd._from_qat(cls, qat_module)
 
     def __init__(
             self,

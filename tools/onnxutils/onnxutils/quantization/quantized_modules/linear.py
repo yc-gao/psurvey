@@ -7,7 +7,7 @@ from .common import BasicQuantizedModule
 
 class QuantizedLinear(BasicQuantizedModule, nn.Linear):
     @classmethod
-    def _from_qat(cls, qat_module):
+    def from_qat(cls, qat_module):
         fq = qat_module.weight_fake_quant
         qscheme = fq.qscheme
         if qscheme == torch.per_tensor_symmetric:
