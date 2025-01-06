@@ -1,0 +1,8 @@
+./tools/optim.py \
+    --optim convert-constant-to-initializer \
+    --optim convert-shape-to-initializer \
+    --optim onnx-simplifier \
+    --optim convert-shape-to-initializer \
+    --optim split-conv-bias-to-bn \
+    -o workdir/unimodel.optimized.onnx \
+    workdir/unimodel.onnx

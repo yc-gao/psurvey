@@ -23,19 +23,27 @@ class FoldConstant:
                 bias = bias.to_numpy()
 
                 sess.remove_node(node)
-                new_conv = node.proto()
+                new_conv = node.clone().proto()
                 new_conv.input[:] = [node.inputs()[0], node.inputs()[1]]
                 new_conv.output[0] = sess.unique_name()
                 sess.add_node(new_conv)
 
-                scale = onnx.helper.make_tensor(
-                    sess.unique_name(), np.ones_like(bias))
-                B = onnx.helper.make_tensor(
-                    sess.unique_name(), np.zeros_like(bias))
-                input_mean = onnx.helper.make_tensor(
-                    sess.unique_name(), -bias)
-                input_var = onnx.helper.make_tensor(
-                    sess.unique_name(), np.ones_line(bias) - 1e-5)
+                scale = onnx.numpy_helper.from_array(
+                    np.ones_like(bias),
+                    sess.unique_name()
+                )
+                B = onnx.numpy_helper.from_array(
+                    np.zeros_like(bias),
+                    sess.unique_name()
+                )
+                input_mean = onnx.numpy_helper.from_array(
+                    -bias,
+                    sess.unique_name()
+                )
+                input_var = onnx.numpy_helper.from_array(
+                    np.ones_like(bias) - 1e-5,
+                    sess.unique_name()
+                )
 
                 sess.add_initializers([scale, B, input_mean, input_var])
 
@@ -43,8 +51,7 @@ class FoldConstant:
                     'BatchNormalization',
                     [new_conv.output[0], scale.name, B.name,
                      input_mean.name, input_var.name],
-                    [sess.unique_name()],
+                    [node.outputs()[0]],
                 )
                 sess.add_node(bn_node)
-                sess.remap_node_inputs({node.outputs()[0]: bn_node.output[0]})
         return onnx_model
