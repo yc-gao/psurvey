@@ -4,12 +4,14 @@ from torch.ao.quantization.observer import ObserverBase
 from torch.ao.quantization.fake_quantize import FakeQuantizeBase
 
 from .modules.convs import QuantizedConv1d, QuantizedConv2d
+from .modules.linear import Linear
 
 
 class BasicQuantizer:
     _quantized_module_mapping = {
+        torch.ao.nn.qat.modules.linear.Linear: Linear,
         torch.ao.nn.qat.modules.conv.Conv1d: QuantizedConv1d,
-        torch.ao.nn.qat.modules.conv.Conv2d: QuantizedConv2d
+        torch.ao.nn.qat.modules.conv.Conv2d: QuantizedConv2d,
     }
 
     @staticmethod
@@ -35,7 +37,6 @@ class BasicQuantizer:
         scale, zero_point = mod.calculate_qparams()
 
         if mod.qscheme in (torch.per_channel_affine,
-                           torch.per_channel_affine_float_qparams,
                            torch.per_channel_symmetric,):
             qparams = {
                 "_scale_": scale,
