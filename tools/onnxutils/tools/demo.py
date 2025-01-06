@@ -57,6 +57,8 @@ def main():
             graph_module,
             example_inputs,
             options.output,
+            input_names=['x'],
+            output_names=['y']
         )
 
 
