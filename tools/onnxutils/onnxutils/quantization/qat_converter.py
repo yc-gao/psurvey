@@ -4,7 +4,7 @@ import torch.ao.nn.qat as nnqat
 from torch.ao.quantization import QConfig
 
 from .utils import partition_module_name
-from .quantized_modules import QuantizedConv1d, QuantizedConv2d
+from .quantized_modules import QuantizedLinear, QuantizedConv1d, QuantizedConv2d, QuantizedConv3d
 
 
 class QatConverter:
@@ -16,8 +16,11 @@ class QatConverter:
         nn.modules.Conv3d: nnqat.modules.Conv3d,
     }
     _quantized_module_mapping = {
+        nnqat.modules.Linear: QuantizedLinear,
+
         nnqat.modules.Conv1d: QuantizedConv1d,
         nnqat.modules.Conv2d: QuantizedConv2d,
+        nnqat.modules.Conv3d: QuantizedConv3d,
     }
 
     @staticmethod
