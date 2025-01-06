@@ -1,142 +1,62 @@
 import torch
-from torch import nn
 
-from torch.ao.quantization.observer import ObserverBase
-from torch.ao.quantization.fake_quantize import FakeQuantizeBase
+from .convert_observer_or_fq import ConvertObserverOrFq
+from .qat_converter import QatConverter
 
-from .modules.convs import QuantizedConv1d, QuantizedConv2d
-from .modules.linear import Linear
+from .utils import partition_module_name, get_new_attr_name_with_prefix
 
 
 class BasicQuantizer:
-    _unquantized_module_mapping = {
-        nn.Linear: torch.ao.nn.qat.modules.linear.Linear,
-        nn.Conv1d: torch.ao.nn.qat.modules.conv.Conv1d,
-        nn.Conv2d: torch.ao.nn.qat.modules.conv.Conv2d,
-    }
-    _quantized_module_mapping = {
-        torch.ao.nn.qat.modules.linear.Linear: Linear,
-        torch.ao.nn.qat.modules.conv.Conv1d: QuantizedConv1d,
-        torch.ao.nn.qat.modules.conv.Conv2d: QuantizedConv2d,
-    }
-
-    @staticmethod
-    def get_new_attr_name_with_prefix(module, prefix, idx=0):
-        prefix = prefix.replace(".", "_")
-
-        attr_name = f"{prefix}{idx}"
-        while hasattr(module, attr_name):
-            idx += 1
-            attr_name = f"{prefix}{idx}"
-
-        return attr_name
-
-    @staticmethod
-    def partition_module_name(target):
-        r = target.rsplit('.', 1)
-        if len(r) == 1:
-            return '', r[0]
-        return r[0], r[1]
-
-    def convert_observer_or_fq_to_qdq(self, graph_module: torch.fx.GraphModule, node: torch.fx.Node):
-        mod = graph_module.get_submodule(node.target)
-        scale, zero_point = mod.calculate_qparams()
-
-        if mod.qscheme in (torch.per_channel_affine,
-                           torch.per_channel_symmetric,):
-            qparams = {
-                "_scale_": scale,
-                "_zero_point_": zero_point,
-                "_axis_": int(mod.ch_axis),
-                "_dtype_": mod.dtype,
-            }
-            quantize_op = torch.quantize_per_channel
-        else:
-            qparams = {
-                "_scale_": float(scale),
-                "_zero_point_": int(zero_point),
-                "_dtype_": mod.dtype
-            }
-            quantize_op = torch.quantize_per_tensor
-
-        parent_name, _ = BasicQuantizer.partition_module_name(node.target)
-        parent_mod = graph_module.get_submodule(parent_name)
-
-        with graph_module.graph.inserting_before(node):
-            quantize_op_inputs = [node.args[0]]
-            for key in ['_scale_', '_zero_point_',  '_axis_', '_dtype_']:
-                value = qparams.get(key, None)
-                if value is None:
-                    continue
-                if key in ["_scale_", "_zero_point_"]:
-                    new_value = (
-                        value.detach().clone()
-                        if isinstance(value, torch.Tensor)
-                        else torch.tensor(value, device=next(iter(graph_module.parameters())).device)
-                    )
-                    attr_name = BasicQuantizer.get_new_attr_name_with_prefix(
-                        parent_mod,
-                        key)
-                    parent_mod.register_buffer(attr_name, new_value)
-                    attr_node = graph_module.graph.create_node(
-                        "get_attr",
-                        f"{parent_name}.{attr_name}" if parent_name else attr_name
-                    )
-                    quantize_op_inputs.append(attr_node)
-                else:
-                    quantize_op_inputs.append(value)
-            quantized_node = graph_module.graph.create_node(
-                "call_function",
-                quantize_op,
-                tuple(quantize_op_inputs), {}
-            )
-            dequantized_node = graph_module.graph.call_method(
-                "dequantize", args=(quantized_node,))
-            node.replace_all_uses_with(dequantized_node)
-            graph_module.graph.erase_node(node)
-
-    def convert_quantized_module(self, graph_module: torch.fx.GraphModule, node: torch.fx.Node):
-        mod = graph_module.get_submodule(node.target)
-        observer_or_fake_quant = mod.weight_fake_quant
-
-        qscheme = observer_or_fake_quant.qscheme
-        if qscheme in (torch.per_tensor_affine, torch.per_tensor_symmetric):
-            qscheme = torch.per_tensor_affine
-        elif qscheme in (torch.per_channel_affine, torch.per_channel_symmetric):
-            qscheme = torch.per_channel_affine
-        else:
-            raise ValueError
-
-        dtype = observer_or_fake_quant.dtype
-        scale, zero_point = observer_or_fake_quant.calculate_qparams()
-
-        qparams = {
-            'qscheme': qscheme,
-            'dtype': dtype,
-            'scale': scale,
-            'zero_point': zero_point.to(torch.int32),
-            'quant_min': observer_or_fake_quant.quant_min,
-            'quant_max': observer_or_fake_quant.quant_max,
+    # [
+    #     {
+    #         'module_name': '',
+    #         'module_type': '',
+    #         'activation': '',
+    #         'weight': ''
+    #     }
+    # ]
+    def quantize_modules(self, graph_module: torch.fx.GraphModule, qconfigs):
+        module_name_to_qconfig = {
+            qconfig['module_name']: qconfig for qconfig in qconfigs if 'module_name' in qconfig
         }
+        module_type_to_qconfig = {
+            qconfig['module_type']: qconfig for qconfig in qconfigs if 'module_type' in qconfig
+        }
+        for node in graph_module.graph.nodes:
+            if node.op != "call_module":
+                continue
+            mod = graph_module.get_submodule(node.target)
 
-        if qscheme == torch.per_channel_affine:
-            qparams['axis'] = observer_or_fake_quant.ch_axis
+            qconfig = module_name_to_qconfig.get(node.target, None)
+            qconfig = qconfig or module_type_to_qconfig.get(type(mod), None)
+            if qconfig is None:
+                continue
 
-        quantized_mod = self._quantized_module_mapping[type(mod)].from_float(
-            mod.to_float(),
-            qparams)
-        parent_name, name = BasicQuantizer.partition_module_name(node.target)
-        setattr(graph_module.get_submodule(parent_name), name, quantized_mod)
+            node.meta['qconfig'] = qconfig  # used in ConvertToQatModule
+
+            act_qconfig = qconfig.get('activation', None)
+            if act_qconfig is None:
+                continue
+
+            parent_name, _ = partition_module_name(node.target)
+            parent_mod = graph_module.get_submodule(parent_name)
+
+            fq_name = get_new_attr_name_with_prefix(parent_mod, "fq")
+            setattr(parent_mod, fq_name, act_qconfig())
+
+            with graph_module.graph.inserting_after(node):
+                fq_node = graph_module.graph.create_node(
+                    'call_module',
+                    f"{parent_name}.{fq_name}" if parent_name else fq_name
+                )
+                node.replace_all_uses_with(fq_node)
+                fq_node.args = (node,)
+        graph_module = torch.fx.GraphModule(graph_module, graph_module.graph)
+
+        graph_module = QatConverter.ConvertToQatModule(graph_module)
+        return graph_module
 
     def finalize(self, graph_module: torch.fx.GraphModule):
-        for node in graph_module.graph.nodes:
-            if node.op == 'call_module':
-                mod = graph_module.get_submodule(node.target)
-                if isinstance(mod, (ObserverBase, FakeQuantizeBase)):
-                    self.convert_observer_or_fq_to_qdq(
-                        graph_module,
-                        node)
-                elif type(mod) in self._quantized_module_mapping:
-                    self.convert_quantized_module(graph_module, node)
-
-        return torch.fx.GraphModule(graph_module, graph_module.graph)
+        graph_module = ConvertObserverOrFq.apply(graph_module)
+        graph_module = QatConverter.ConvertToQuantizedModule(graph_module)
+        return graph_module

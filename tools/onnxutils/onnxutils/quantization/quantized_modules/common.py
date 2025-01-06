@@ -1,11 +1,8 @@
 import torch
-from torch import nn
+import torch.nn as nn
 
 
 class BasicQuantizedModule(nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
-
     def _init_weight_qparams(self, weight_qparams):
         self.weight_qscheme = weight_qparams['qscheme']
 
@@ -19,9 +16,9 @@ class BasicQuantizedModule(nn.Module):
                                        torch.per_tensor_affine,)
 
         if self.weight_qscheme == torch.per_channel_affine:
-            self.weight_axis_int = weight_qparams['axis']
+            self.weight_axis_int = weight_qparams['ch_axis']
 
-    def get_weight(self):
+    def get_fake_quant_weight(self):
         if self.weight_qscheme == torch.per_channel_affine:
             return torch.fake_quantize_per_channel_affine(
                 self.weight,
