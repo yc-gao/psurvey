@@ -45,7 +45,14 @@ def main():
         [
             {
                 'name': 'conv0',
-                'weight': FakeQuantize.with_args(observer=PerChannelMinMaxObserver.with_args(qscheme=torch.per_channel_symmetric, dtype=torch.qint8)),
+                'weight': FakeQuantize.with_args(
+                    observer=PerChannelMinMaxObserver.with_args(
+                        ch_axis=1,
+                        dtype=torch.qint8,
+                        qscheme=torch.per_channel_symmetric,
+                        quant_min=-128,
+                        quant_max=127,
+                    )),
                 'input': FakeQuantize.with_args(observer=HistogramObserver),
                 'output': FakeQuantize.with_args(observer=HistogramObserver),
 
@@ -54,6 +61,7 @@ def main():
     )
     graph_module.print_readable()
 
+    graph_module(*example_inputs)
     graph_module = quantizer.finalize(graph_module)
     graph_module.print_readable()
 
@@ -61,7 +69,7 @@ def main():
         torch.onnx.export(
             graph_module,
             example_inputs,
-            options.output
+            options.output,
         )
 
 

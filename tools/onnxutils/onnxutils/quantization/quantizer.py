@@ -114,7 +114,9 @@ class BasicQuantizer:
             'qscheme': qscheme,
             'dtype': dtype,
             'scale': scale,
-            'zero_point': zero_point,
+            'zero_point': zero_point.to(torch.int32),
+            'quant_min': observer_or_fake_quant.quant_min,
+            'quant_max': observer_or_fake_quant.quant_max,
         }
 
         if qscheme == torch.per_channel_affine:

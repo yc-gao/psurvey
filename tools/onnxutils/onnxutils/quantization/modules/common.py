@@ -8,9 +8,12 @@ class BasicQuantizedModule(nn.Module):
 
     def _init_weight_qparams(self, weight_qparams):
         self.weight_qscheme = weight_qparams['qscheme']
-        self.weight_dtype = weight_qparams['dtype']
+
         self.weight_scale = weight_qparams['scale']
         self.weight_zero_point = weight_qparams['zero_point']
+
+        self.weight_quant_min = weight_qparams['quant_min']
+        self.weight_quant_max = weight_qparams['quant_max']
 
         assert self.weight_qscheme in (torch.per_channel_affine,
                                        torch.per_tensor_affine,)
@@ -20,19 +23,18 @@ class BasicQuantizedModule(nn.Module):
 
     def get_weight(self):
         if self.weight_qscheme == torch.per_channel_affine:
-            weight = torch.quantize_per_channel(
+            return torch.fake_quantize_per_channel_affine(
                 self.weight,
                 self.weight_scale,
                 self.weight_zero_point,
                 self.weight_axis_int,
-                self.weight_dtype
+                self.weight_quant_min,
+                self.weight_quant_max
             )
-        else:
-            weight = torch.quantize_per_tensor(
-                self.weight,
-                self.weight_scale,
-                self.weight_zero_point,
-                self.weight_dtype
-            )
-        weight = weight.dequantize()
-        return weight
+        return torch.fake_quantize_per_tensor_affine(
+            self.weight,
+            self.weight_scale,
+            self.weight_zero_point,
+            self.weight_quant_min,
+            self.weight_quant_max
+        )
