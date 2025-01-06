@@ -6,10 +6,10 @@ from torch import nn
 
 from torch.ao.quantization.observer import MinMaxObserver, HistogramObserver, PerChannelMinMaxObserver
 from torch.ao.quantization.fake_quantize import FakeQuantize
-
+from torch.ao.quantization.fx.tracer import QuantizationTracer
 
 from onnxutils.quantization.utils import symbolic_trace
-from onnxutils.quantization.qnn_quantizer import QnnQuantizer
+from onnxutils.quantization.convert_observer_or_fq import ConvertObserverOrFq
 
 
 class M(nn.Module):
@@ -39,31 +39,24 @@ def main():
     graph_module = symbolic_trace(module)
     graph_module.print_readable()
 
-    quantizer = QnnQuantizer()
-    graph_module = quantizer.quantize(
-        graph_module,
-        [
-            {
-                'name': 'conv0',
-                'weight': FakeQuantize.with_args(
-                    observer=PerChannelMinMaxObserver.with_args(
-                        ch_axis=1,
-                        dtype=torch.qint8,
-                        qscheme=torch.per_channel_symmetric,
-                        quant_min=-128,
-                        quant_max=127,
-                    )),
-                'input': FakeQuantize.with_args(observer=HistogramObserver),
-                'output': FakeQuantize.with_args(observer=HistogramObserver),
-
-            },
-        ]
-    )
+    for node in graph_module.graph.nodes:
+        if node.target == 'conv0':
+            graph_module.add_submodule(
+                'fq0', FakeQuantize(observer=MinMaxObserver))
+            with graph_module.graph.inserting_after(node):
+                new_node = graph_module.graph.create_node('call_module', 'fq0')
+                node.replace_all_uses_with(new_node)
+                new_node.insert_arg(0, node)
+    graph_module = torch.fx.GraphModule(graph_module, graph_module.graph)
     graph_module.print_readable()
 
     graph_module(*example_inputs)
-    graph_module = quantizer.finalize(graph_module)
+
+    graph_module = ConvertObserverOrFq.apply(graph_module)
     graph_module.print_readable()
+
+    # graph_module = ConvertObserverOrFq.apply(graph_module)
+    # graph_module.print_readable()
 
     if options.output:
         torch.onnx.export(
