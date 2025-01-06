@@ -11,7 +11,7 @@ from torch.ao.quantization.fake_quantize import FakeQuantize
 from onnxutils.quantization.utils import symbolic_trace
 from onnxutils.quantization.quantizer import BasicQuantizer
 
-from unimodel_pipeline import ImageNetPipeline
+from imagenet_pipeline import ImageNetPipeline
 
 
 def parse_options():
