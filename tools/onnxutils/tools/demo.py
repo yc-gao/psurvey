@@ -4,9 +4,8 @@ import argparse
 import torch
 from torch import nn
 
-from torch.ao.quantization.observer import MinMaxObserver, HistogramObserver, PerChannelMinMaxObserver
+from torch.ao.quantization.observer import HistogramObserver, PerChannelMinMaxObserver
 from torch.ao.quantization.fake_quantize import FakeQuantize
-from torch.ao.quantization.fx.tracer import QuantizationTracer
 
 from onnxutils.quantization.utils import symbolic_trace
 from onnxutils.quantization.quantizer import BasicQuantizer
