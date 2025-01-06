@@ -50,7 +50,7 @@ class QuantizedConvTranspose1d(nn.ConvTranspose1d, QuantizedConvTransposeNd):
         dtype=None,
         weight_qparams: dict = {}
     ):
-        super().__init__(
+        nn.ConvTranspose1d.__init__(
             self,
             in_channels,
             out_channels,
@@ -113,7 +113,7 @@ class QuantizedConvTranspose2d(nn.ConvTranspose2d, QuantizedConvTransposeNd):
         dtype=None,
         weight_qparams: dict = {}
     ):
-        super().__init__(
+        nn.ConvTranspose2d.__init__(
             self,
             in_channels,
             out_channels,

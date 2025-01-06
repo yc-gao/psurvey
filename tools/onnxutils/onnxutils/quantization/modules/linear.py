@@ -30,7 +30,7 @@ class Linear(nn.Linear, BasicQuantizedModule):
         dtype=None,
         weight_qparams: dict = {}
     ):
-        super().__init__(in_features, out_features, bias, device, dtype)
+        nn.Linear.__init__(in_features, out_features, bias, device, dtype)
         self._init_weight_qparams(weight_qparams)
 
     def forward(self, x):

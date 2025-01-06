@@ -48,7 +48,7 @@ class QuantizedConv1d(nn.Conv1d, QuantizedConvNd):
         dtype=None,
         weight_qparams: dict = {}
     ):
-        super().__init__(
+        nn.Conv1d.__init__(
             self,
             in_channels,
             out_channels,
@@ -98,7 +98,7 @@ class QuantizedConv2d(torch.nn.Conv2d, QuantizedConvNd):
         dtype=None,
         weight_qparams: dict = {},
     ):
-        super().__init__(
+        nn.Conv2d.__init__(
             self,
             in_channels,
             out_channels,

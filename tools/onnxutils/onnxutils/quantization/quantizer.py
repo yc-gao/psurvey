@@ -1,4 +1,5 @@
 import torch
+from torch import nn
 
 from torch.ao.quantization.observer import ObserverBase
 from torch.ao.quantization.fake_quantize import FakeQuantizeBase
@@ -8,6 +9,11 @@ from .modules.linear import Linear
 
 
 class BasicQuantizer:
+    _unquantized_module_mapping = {
+        nn.Linear: torch.ao.nn.qat.modules.linear.Linear,
+        nn.Conv1d: torch.ao.nn.qat.modules.conv.Conv1d,
+        nn.Conv2d: torch.ao.nn.qat.modules.conv.Conv2d,
+    }
     _quantized_module_mapping = {
         torch.ao.nn.qat.modules.linear.Linear: Linear,
         torch.ao.nn.qat.modules.conv.Conv1d: QuantizedConv1d,
