@@ -58,6 +58,10 @@ class BasicQuantizer:
     # [
     #     {
     #         'module_name': '',
+    #         'activation': '',
+    #         'weight': ''
+    #     },
+    #     {
     #         'module_type': '',
     #         'activation': '',
     #         'weight': ''
@@ -103,6 +107,16 @@ class BasicQuantizer:
         graph_module = torch.fx.GraphModule(graph_module, graph_module.graph)
 
         graph_module = QatConverter.ConvertToQatModule(graph_module)
+        return graph_module
+
+    def quantize(self, graph_module: torch.fx.GraphModule, qconfigs):
+        node_qconfigs = [
+            qconfig for qconfig in qconfigs if 'name' in qconfig or 'op' in qconfig]
+        module_qconfigs = [
+            qconfig for qconfig in qconfigs if 'module_name' in qconfig or 'module_type' in qconfig
+        ]
+        graph_module = self.quantize_nodes(graph_module, node_qconfigs)
+        graph_module = self.quantize_modules(graph_module, module_qconfigs)
         return graph_module
 
     def finalize(self, graph_module: torch.fx.GraphModule):

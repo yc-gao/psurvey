@@ -38,7 +38,7 @@ def main():
 
     graph_module = symbolic_trace(graph_module)
     quantizer = BasicQuantizer()
-    graph_module = quantizer.quantize_modules(graph_module, [
+    graph_module = quantizer.quantize(graph_module, [
         {
             'module_type': nn.Conv2d,
             'weight': FakeQuantize.with_args(
