@@ -4,7 +4,7 @@ import unittest
 import torch
 
 from onnxutils.onnx2torch.utils import OnnxMapping
-from onnxutils.quantization.utils import LayerObserver
+from onnxutils.quantization.layer_observer import LayerObserver
 
 
 class M(torch.nn.Module):

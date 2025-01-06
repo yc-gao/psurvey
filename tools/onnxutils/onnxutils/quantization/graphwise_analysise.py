@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-from .utils import LayerObserver
+from .layer_observer import LayerObserver
 from .metric import compute_metrics
 
 

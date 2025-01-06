@@ -1,6 +1,6 @@
 from tqdm import tqdm
 
-from .utils import LayerObserver, compute_metrics
+from .layer_observer import LayerObserver, compute_metrics
 
 
 # def layerwise_analyse(model, quantized_model, dataloader, metrics=['snr', 'mse', 'cosine'], **kwargs):
