@@ -90,7 +90,7 @@ class NodeQuantizer:
             parent_name, _ = self.partition_module_name(node.target)
             parent_mod = graph_module.get_submodule(parent_name)
 
-            with graph_module.graph.inserting_after(node):
+            with graph_module.graph.inserting_before(node):
                 op_args = [node.args[0]]
 
                 for name in ['scale', 'zero_point',  'ch_axis', 'quant_min', 'quant_max']:
