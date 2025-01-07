@@ -76,7 +76,7 @@ def do_verify(model0, model1, rtol=1e-2, atol=1e-3):
                 max_val = tmp.max()
                 min_val = tmp.min()
                 mean_val = tmp.mean()
-                print(f"diff {max_val} {min_val} {mean_val} {tmp.argmax()}")
+                print(f"diff {max_val} {min_val} {mean_val}")
             else:
                 print(f"verify field[{node.name}]...passed")
 
