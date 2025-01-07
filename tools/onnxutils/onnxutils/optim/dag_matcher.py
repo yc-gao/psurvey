@@ -78,19 +78,23 @@ class DagMatcher:
             'inputs': inputs
         }
 
-    def MatchAllDags(self, onnx_model: OnnxModel):
+    def MatchAllDags(self, onnx_model: OnnxModel, remove_overlapped=True):
         dags = []
-        node_matched = set()
-        for node in reversed(onnx_model.nodes()):
-            if node.name in node_matched:
-                continue
+        for node in onnx_model.nodes():
             ret, dag = self.MatchDag(onnx_model, node)
-            if not ret:
-                continue
+            if ret:
+                dags.append(dag)
+
+        if not remove_overlapped:
+            return dags
+
+        new_dags = []
+        node_matched = set()
+        for dag in dags:
             all_nodes = DagMatcher.GetAllNodes(dag)
             if any(node.name in node_matched for node in all_nodes):
                 continue
-            dags.append(dag)
+            new_dags.append(dag)
             node_matched.update(
                 [node.name for node in all_nodes])
-        return dags
+        return new_dags
