@@ -29,7 +29,11 @@ class NodeQuantizer:
     def quantize(
             self,
             graph_module: torch.fx.GraphModule,
-            qconfig_mapping: dict[str, dict]):
+            qconfigs: list[dict]):
+        qconfig_mapping: dict[str, dict] = {
+            qconfig['name']: qconfig for qconfig in qconfigs
+        }
+
         for node in graph_module.graph.nodes:
             qconfig = qconfig_mapping.get(node.name, None)
             if qconfig is None:

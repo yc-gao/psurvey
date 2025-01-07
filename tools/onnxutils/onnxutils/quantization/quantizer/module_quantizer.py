@@ -26,8 +26,26 @@ class ModuleQuantizer(NodeQuantizer):
     def quantize(
             self,
             graph_module: torch.fx.GraphModule,
-            qconfig_mapping: dict[str, dict]):
-        graph_module = super().quantize(graph_module, qconfig_mapping)
+            qconfigs: list[dict]):
+        module_name_mapping = {
+            node.target: node.name
+            for node in graph_module.graph.nodes if node.op == 'call_module'
+        }
+
+        qconfigs = [
+            x
+            if 'name' in x
+            else {'name': module_name_mapping[x['module_name']]} | x
+            for x in qconfigs]
+
+        graph_module = super().quantize(
+            graph_module,
+            qconfigs,
+        )
+
+        qconfig_mapping: dict[str, dict] = {
+            qconfig['name']: qconfig for qconfig in qconfigs
+        }
 
         for node in graph_module.graph.nodes:
             qconfig = qconfig_mapping.get(node.name, None)
