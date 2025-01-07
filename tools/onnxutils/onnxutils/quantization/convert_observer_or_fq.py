@@ -29,8 +29,8 @@ class ConvertObserverOrFq:
                 'qscheme': qscheme,
                 'quant_min': quant_min,
                 'quant_max': quant_max,
-                'scale': scale,
-                'zero_point': zero_point,
+                'scale': scale.to(torch.float),
+                'zero_point': zero_point.to(torch.int32),
             }
 
             if qscheme in (torch.per_tensor_affine, torch.per_tensor_symmetric):
