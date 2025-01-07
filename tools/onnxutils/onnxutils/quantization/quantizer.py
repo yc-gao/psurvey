@@ -10,13 +10,11 @@ class BasicQuantizer:
     # [
     #     {
     #         'name': '',
-    #         'module_type': '',
     #         'activation': '',
     #         'weight': ''
     #     },
     #     {
     #         'op': '',
-    #         'module_type': '',
     #         'activation': '',
     #         'weight': ''
     #     }
