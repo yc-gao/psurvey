@@ -1,7 +1,7 @@
 import numpy as np
 
-from onnxutils.onnx import OnnxModel
-from onnxutils.onnx import OnnxTensor
+from .onnx_model import OnnxModel
+from .onnx_tensor import OnnxTensor
 
 from .registry import optimizer
 from .dag_matcher import DagMatcher

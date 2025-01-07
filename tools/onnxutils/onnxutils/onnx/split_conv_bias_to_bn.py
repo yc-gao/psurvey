@@ -1,7 +1,7 @@
 import onnx
 import numpy as np
 
-from onnxutils.onnx import OnnxModel
+from .onnx_model import OnnxModel
 
 from .registry import optimizer
 
