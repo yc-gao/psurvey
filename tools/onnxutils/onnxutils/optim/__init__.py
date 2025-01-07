@@ -1,4 +1,4 @@
-from .registry import find_optimizer
+from .registry import optimizer, find_optimizer
 from .dag_matcher import DagMatcher
 from .utils import apply_optimizers
 
