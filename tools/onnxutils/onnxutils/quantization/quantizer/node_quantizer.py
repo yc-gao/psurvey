@@ -3,22 +3,67 @@ import torch
 from torch.ao.quantization.observer import ObserverBase
 from torch.ao.quantization.fake_quantize import FakeQuantizeBase
 
-from .utils import partition_module_name, get_new_attr_name_with_prefix
 
-
-class ConvertObserverOrFq:
+class NodeQuantizer:
     @staticmethod
-    def apply(graph_module: torch.fx.GraphModule):
+    def get_new_attr_name_with_prefix(
+            module: torch.nn.Module,
+            prefix: str,
+            idx: int = 0):
+        prefix = prefix.replace(".", "_")
+
+        while True:
+            attr_name = f"{prefix}{idx}"
+            if not hasattr(module, attr_name):
+                break
+            idx += 1
+        return attr_name
+
+    @staticmethod
+    def partition_module_name(target: str):
+        r = target.rsplit('.', 1)
+        if len(r) == 1:
+            return '', r[0]
+        return r[0], r[1]
+
+    def quantize(
+            self,
+            graph_module: torch.fx.GraphModule,
+            qconfig_mapping: dict[str, dict]):
+        for node in graph_module.graph.nodes:
+            qconfig = qconfig_mapping.get(node.name, None)
+            if qconfig is None:
+                continue
+
+            act_qconfig = qconfig.get('activation', None)
+            if act_qconfig is None:
+                continue
+
+            fq_name = self.get_new_attr_name_with_prefix(
+                graph_module, 'fq')
+            graph_module.add_submodule(fq_name, act_qconfig())
+
+            with graph_module.graph.inserting_after(node):
+                fq_node = graph_module.graph.create_node(
+                    'call_module',
+                    fq_name
+                )
+                node.replace_all_uses_with(fq_node)
+                fq_node.args = (node,)
+
+        return torch.fx.GraphModule(graph_module, graph_module.graph)
+
+    def finalize(
+        self,
+        graph_module: torch.fx.GraphModule
+    ):
         for node in graph_module.graph.nodes:
             if node.op != 'call_module':
                 continue
+
             mod = graph_module.get_submodule(node.target)
             if not isinstance(mod, (ObserverBase, FakeQuantizeBase)):
                 continue
-
-            device = next(iter(graph_module.parameters())).device
-            parent_name, _ = partition_module_name(node.target)
-            parent_mod = graph_module.get_submodule(parent_name)
 
             qscheme = mod.qscheme
             quant_min = mod.quant_min
@@ -41,8 +86,13 @@ class ConvertObserverOrFq:
             else:
                 raise NotImplementedError
 
-            with graph_module.graph.inserting_before(node):
+            device = next(iter(graph_module.parameters())).device
+            parent_name, _ = self.partition_module_name(node.target)
+            parent_mod = graph_module.get_submodule(parent_name)
+
+            with graph_module.graph.inserting_after(node):
                 op_args = [node.args[0]]
+
                 for name in ['scale', 'zero_point',  'ch_axis', 'quant_min', 'quant_max']:
                     if qparams.get(name, None) is None:
                         continue
@@ -52,7 +102,7 @@ class ConvertObserverOrFq:
                             if isinstance(qparams[name], torch.Tensor)
                             else torch.tensor(qparams[name], device=device)
                         )
-                        attr_name = get_new_attr_name_with_prefix(
+                        attr_name = self.get_new_attr_name_with_prefix(
                             parent_mod, name)
                         parent_mod.register_buffer(attr_name, new_value)
                         attr_node = graph_module.graph.create_node(
