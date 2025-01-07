@@ -1,4 +1,4 @@
-from onnxutils.common import OnnxModel
+from onnxutils.onnx import OnnxModel
 
 # {
 #     'op_type': 'QuantizeLinear',

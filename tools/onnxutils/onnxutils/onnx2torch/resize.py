@@ -3,7 +3,7 @@ import warnings
 from torch import nn
 
 
-from onnxutils.common import OnnxModel, OnnxNode
+from onnxutils.onnx import OnnxModel, OnnxNode
 
 from .registry import converter
 from .utils import OnnxToTorchModule, OperationConverterResult, OnnxMapping

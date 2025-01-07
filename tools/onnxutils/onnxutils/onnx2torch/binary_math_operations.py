@@ -3,7 +3,7 @@ import torch
 from torch import nn
 
 
-from onnxutils.common import OnnxModel, OnnxNode, OnnxTensor
+from onnxutils.onnx import OnnxModel, OnnxNode, OnnxTensor
 
 from .registry import converter
 from .utils import OnnxToTorchModule, OperationConverterResult, onnx_mapping_from_node

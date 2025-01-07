@@ -5,7 +5,7 @@ from torchvision import datasets, transforms
 import torch
 from torch import nn
 
-from onnxutils.common.dataset import DatasetUtils
+from onnxutils.dataset import DatasetUtils
 
 
 class ImageNetPipeline:

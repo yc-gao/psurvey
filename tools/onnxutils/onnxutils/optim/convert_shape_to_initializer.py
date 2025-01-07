@@ -1,6 +1,6 @@
 import numpy as np
 
-from onnxutils.common import OnnxModel, OnnxTensor
+from onnxutils.onnx import OnnxModel, OnnxTensor
 
 from .registry import optimizer
 

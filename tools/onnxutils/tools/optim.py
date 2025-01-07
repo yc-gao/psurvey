@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 
-from onnxutils.common import OnnxModel
+from onnxutils.onnx import OnnxModel
 from onnxutils.optim import apply_optimizers
 
 

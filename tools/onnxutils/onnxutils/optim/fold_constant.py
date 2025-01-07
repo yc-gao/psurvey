@@ -1,6 +1,6 @@
 import onnx
 
-from onnxutils.common import OnnxModel
+from onnxutils.onnx import OnnxModel
 
 from .registry import optimizer
 

@@ -1,4 +1,4 @@
-from onnxutils.common import OnnxModel
+from onnxutils.onnx import OnnxModel
 
 from .registry import find_optimizer
 

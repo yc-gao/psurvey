@@ -9,7 +9,7 @@ import numpy as np
 import onnx
 import onnxruntime as ort
 
-from onnxutils.common import OnnxModel
+from onnxutils.onnx import OnnxModel
 from onnxutils.onnx2torch import convert
 
 

@@ -2,7 +2,7 @@ from typing import Tuple
 from typing import NamedTuple
 
 import torch
-from onnxutils.common import OnnxNode
+from onnxutils.onnx import OnnxNode
 
 
 class OperationDescription(NamedTuple):

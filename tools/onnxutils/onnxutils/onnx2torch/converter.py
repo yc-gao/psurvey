@@ -2,7 +2,7 @@ from operator import getitem
 
 import torch
 
-from onnxutils.common import OnnxModel, OnnxNode
+from onnxutils.onnx import OnnxModel, OnnxNode
 
 from .registry import find_converter
 from .utils import OnnxMapping
