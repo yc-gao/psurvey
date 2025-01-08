@@ -30,7 +30,7 @@ class OnnxModel:
                                    for x in self._proto.graph.initializer)
 
         self._name_to_node = {
-            x.name: x for x in self._nodes
+            x.name(): x for x in self._nodes
         }
         self._output_to_node = {
             output: node for node in self._nodes for output in node.outputs()

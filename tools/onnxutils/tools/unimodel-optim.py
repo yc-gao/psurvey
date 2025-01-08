@@ -174,6 +174,69 @@ def custom_fix1(onnx_model: OnnxModel):
     return onnx_model
 
 
+def custom_fix3(onnx_model: OnnxModel):
+    for node_name in [
+        "/det3d_bbox_head/conv_reg.0/Conv",
+        "/det3d_bbox_head/conv_reg.1/Conv",
+        "/det3d_bbox_head/conv_reg.2/Conv",
+        "/det3d_bbox_head/conv_reg.3/Conv",
+    ]:
+        with onnx_model.session() as sess:
+            conv_node = onnx_model.get_node_by_name(node_name)
+            assert conv_node is not None, f"get node '{node_name}' failed"
+
+            conv_weight = onnx_model.get_initializer_by_name(
+                conv_node.inputs()[1]).to_numpy().reshape(-1, 256).T
+            conv_weight = onnx.numpy_helper.from_array(
+                conv_weight, sess.unique_name())
+
+            conv_bias = onnx_model.get_initializer_by_name(
+                conv_node.inputs()[2]).to_numpy()
+            conv_bias = onnx.numpy_helper.from_array(
+                conv_bias, sess.unique_name())
+
+            sess.add_initializers([conv_weight, conv_bias])
+
+            transpose_node = onnx.helper.make_node(
+                'Transpose',
+                [conv_node.inputs()[0]],
+                [sess.unique_name()],
+                sess.unique_name(),
+                perm=[0, 2, 3, 1]
+            )
+            sess.add_node(transpose_node)
+
+            matmul_node = onnx.helper.make_node(
+                'MatMul',
+                [transpose_node.output[0], conv_weight.name],
+                [sess.unique_name()],
+                sess.unique_name()
+            )
+            sess.add_node(matmul_node)
+
+            add_node = onnx.helper.make_node(
+                'Add',
+                [matmul_node.output[0], conv_bias.name],
+                [sess.unique_name()],
+                sess.unique_name()
+            )
+            sess.add_node(add_node)
+
+            transpose_node = onnx.helper.make_node(
+                'Transpose',
+                [add_node.output[0]],
+                [sess.unique_name()],
+                sess.unique_name(),
+                perm=[0, 3, 1, 2]
+            )
+            sess.add_node(transpose_node)
+
+            sess.remap_node_inputs({
+                conv_node.outputs()[0]: transpose_node.output[0]
+            })
+    return onnx_model
+
+
 def parse_options():
     parser = argparse.ArgumentParser()
     parser.add_argument('-o', '--output')
@@ -188,6 +251,7 @@ def main():
 
     new_onnx = custom_fix0(onnx_model)
     new_onnx = custom_fix1(onnx_model)
+    new_onnx = custom_fix3(onnx_model)
     new_onnx.topological_sort()
 
     onnx_model = apply_optimizers(onnx_model, [
