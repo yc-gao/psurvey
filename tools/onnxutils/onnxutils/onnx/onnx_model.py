@@ -209,6 +209,9 @@ class OnnxModel:
             def remove_node(self, node: OnnxNode):
                 self._nodes_to_remove.append(node)
 
+            def remove_nodes(self, nodes):
+                self._nodes_to_remove.extend(nodes)
+
             def remap_node_inputs(self, remap):
                 self._remap_node_inputs.update(remap)
 

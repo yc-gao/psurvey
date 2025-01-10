@@ -8,8 +8,8 @@ from .registry import optimizer
 @optimizer('fold-constant')
 class FoldConstant:
     @staticmethod
-    def eval_const_node(onnx_model: OnnxModel, constant_node):
-        onnx_model = onnx_model.extract([], constant_node.outputs())
+    def eval_const_vals(onnx_model: OnnxModel, const_vals):
+        onnx_model = onnx_model.extract([], const_vals)
         import onnxruntime as ort
         sess = ort.InferenceSession(
             onnx_model.proto().SerializeToString(),
@@ -41,9 +41,14 @@ class FoldConstant:
                     output_name not in output_names
                     for output_name in x.outputs())]
 
-            for node in nodes_to_fold:
-                sess.add_initializers(
-                    FoldConstant.eval_const_node(onnx_model, node))
-                sess.remove_node(node)
+            if nodes_to_fold:
+                const_vals = [
+                    output
+                    for node in nodes_to_fold
+                    for output in node.outputs()]
+                const_vals = FoldConstant.eval_const_vals(
+                    onnx_model, const_vals)
+                sess.add_initializers(const_vals)
+                sess.remove_nodes(nodes_to_fold)
 
         return onnx_model
