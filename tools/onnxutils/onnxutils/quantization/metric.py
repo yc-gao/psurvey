@@ -75,7 +75,7 @@ def compute_cosine(real, pred, reduction='none'):
     return do_compute(real, pred, inner_kernel)
 
 
-def compute_snr(real, pred, reduction='none'):
+def compute_snr(real, pred, eps=1e-7, reduction='none'):
     def inner_kernel(real, pred):
         assert real.shape == pred.shape
         if real.dim() < 2:
@@ -85,7 +85,9 @@ def compute_snr(real, pred, reduction='none'):
         real = real.flatten(start_dim=1).float()
         pred = pred.flatten(start_dim=1).float()
 
-        metrics = (torch.pow(real - pred, 2) / torch.pow(real, 2)).sum(dim=-1)
+        metrics = (
+            torch.pow(real - pred, 2) / (torch.pow(real, 2) + eps)
+        ).sum(dim=-1)
 
         if reduction == 'none':
             return metrics

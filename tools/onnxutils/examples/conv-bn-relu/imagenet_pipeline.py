@@ -22,10 +22,19 @@ class ImageNetPipeline:
         return dataset
 
     @staticmethod
+    def calibrate(model, dataloader, device='cuda'):
+        model.eval().to(device)
+        with torch.no_grad():
+            for images, _ in tqdm(dataloader):
+                images = images.to(device)
+                model(images)
+
+    @staticmethod
     def eval(model, dataloader, device='cuda'):
         total = 0
         correct = 0
-        model.to(device)
+
+        model.eval().to(device)
         with torch.no_grad():
             for images, labels in tqdm(dataloader):
                 images, labels = images.to(device), labels.to(device)
@@ -39,7 +48,7 @@ class ImageNetPipeline:
         loss_fn = nn.CrossEntropyLoss()
         optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
-        model.to(device)
+        model.train().to(device)
         for images, labels in tqdm(dataloader):
             images, labels = images.to(device), labels.to(device)
             pred = model(images)
