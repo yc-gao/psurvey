@@ -60,9 +60,12 @@ class FoldConstant:
                     conv_weight,
                     conv_node.inputs()[1]))
 
+                new_conv_node = conv_node.clone().proto()
+                new_conv_node.output[0] = bn_node.outputs()[0]
+
                 if len(conv_node.inputs()) >= 3:
                     conv_bias = onnx_model.get_initializer_by_name(
-                        conv_node.inputs()[2])
+                        new_conv_node.input[2])
                     sess.remove_initializer(conv_bias)
 
                     conv_bias = conv_bias.to_numpy() + bias_factor
@@ -74,15 +77,16 @@ class FoldConstant:
                     )
                 else:
                     conv_bias = bias_factor
-                    sess.remove_node(conv_node)
-                    new_conv_node = conv_node.clone().proto()
                     new_conv_node.input.append(sess.unique_name())
-                    sess.add_node(new_conv_node)
                     sess.add_initializer(
                         onnx.numpy_helper.from_array(
                             conv_bias,
                             new_conv_node.input[2]
                         )
                     )
+
+                sess.remove_node(bn_node)
+                sess.remove_node(conv_node)
+                sess.add_node(new_conv_node)
 
             return onnx_model
