@@ -26,6 +26,11 @@ class FoldConstant:
             for dag in dag_pattern.MatchAllDags(onnx_model):
                 bn_node = dag_pattern.GetNode(dag, 0)
                 conv_node = dag_pattern.GetNode(dag, 1)
+                assert bn_node is not None
+                assert conv_node is not None
+
+                if onnx_model.get_counter_of_node(conv_node) > 1:
+                    continue
 
                 epsilon = bn_node.attributes().get('epsilon', 1e-5)
 

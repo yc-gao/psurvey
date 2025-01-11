@@ -24,10 +24,13 @@ class FoldConstant:
     def apply(onnx_model: OnnxModel) -> OnnxModel:
         with onnx_model.session() as sess:
             for dag in dag_pattern.MatchAllDags(onnx_model):
+                bn_node = dag_pattern.GetNode(dag, 0)
                 gemm_node = dag_pattern.GetNode(dag, 1)
+                assert bn_node is not None
+                assert gemm_node is not None
+
                 if onnx_model.get_counter_of_node(gemm_node) > 1:
                     continue
-                bn_node = dag_pattern.GetNode(dag, 0)
 
                 bn_scale = onnx_model.get_initializer_by_name(
                     bn_node.inputs()[1]).to_numpy()
