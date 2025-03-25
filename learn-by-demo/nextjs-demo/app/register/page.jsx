@@ -1,6 +1,12 @@
+'use client'
 import Link from 'next/link';
+import Form from 'next/form';
 
 export default function() {
+    const handleSubmit = async (formData) => {
+        console.log(formData)
+    };
+
     return (
         <div className="w-screen h-dvh flex justify-center pt-12 md:pt-0 items-start md:items-center">
             <div className="flex flex-col justify-start items-stretch gap-12">
@@ -10,11 +16,14 @@ export default function() {
                         Use your email and password to sign in.
                     </p>
                 </div>
-                <form action="/" className='w-full flex flex-col justify-start items-stretch gap-4'>
+                <Form
+                    action={handleSubmit}
+                    className='w-full flex flex-col justify-start items-stretch gap-4'>
                     <div className='flex flex-col items-stretch gap-2'>
                         <p className='text-zinc-600'>Email Address</p>
                         <input
                             type="text"
+                            name="email"
                             placeholder="user@acme.com"
                             className='h-10 w-full rounded-md border bg-background px-3 py-2'
                         />
@@ -23,6 +32,7 @@ export default function() {
                         <p className='text-zinc-600'>Password</p>
                         <input
                             type="password"
+                            name="password"
                             className='h-10 w-full rounded-md border bg-background px-3 py-2'
                         />
                     </div>
@@ -41,7 +51,7 @@ export default function() {
                         </Link>
                         {" for free."}
                     </p>
-                </form>
+                </Form>
             </div>
         </div>
     );
