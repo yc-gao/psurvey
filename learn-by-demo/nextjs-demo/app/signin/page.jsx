@@ -1,11 +1,12 @@
-'use client'
-import Link from 'next/link';
-import Form from 'next/form';
+"use client"
+import { useActionState } from 'react'
+import Link from 'next/link'
+import Form from 'next/form'
+
+import { handleRegister } from './actions'
 
 export default function() {
-    const handleSubmit = async (formData) => {
-        console.log(formData)
-    };
+    const [state, formAction, pending] = useActionState(handleRegister, {})
 
     return (
         <div className="w-screen h-dvh flex justify-center pt-12 md:pt-0 items-start md:items-center">
@@ -17,7 +18,7 @@ export default function() {
                     </p>
                 </div>
                 <Form
-                    action={handleSubmit}
+                    action={formAction}
                     className='w-full flex flex-col justify-start items-stretch gap-4'>
                     <div className='flex flex-col items-stretch gap-2'>
                         <p className='text-zinc-600'>Email Address</p>
@@ -38,6 +39,7 @@ export default function() {
                     </div>
                     <input
                         type="submit"
+                        disabled={pending}
                         value="Sign in"
                         className='h-10 w-full rounded-md bg-gray-950 text-gray-50 hover:cursor-pointer'
                     />
