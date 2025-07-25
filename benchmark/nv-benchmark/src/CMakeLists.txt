@@ -7,5 +7,4 @@ macro(add_benchmark name)
 endmacro()
 
 add_benchmark(copy copy.cu)
-add_benchmark(reduce reduce.cu)
 
