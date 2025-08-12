@@ -7,4 +7,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nvbench)
 
+set(CUTLASS_ENABLE_HEADERS_ONLY ON)
+set(CUTLASS_ENABLE_EXAMPLES OFF)
+set(CUTLASS_ENABLE_TOOLS OFF)
+set(CUTLASS_ENABLE_TESTS OFF)
+FetchContent_Declare(
+    cutlass
+    GIT_REPOSITORY  https://github.com/NVIDIA/cutlass.git
+    GIT_TAG         main
+)
+FetchContent_MakeAvailable(cutlass)
 
