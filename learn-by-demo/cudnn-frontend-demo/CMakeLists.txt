@@ -20,10 +20,10 @@ find_package(CUDAToolkit REQUIRED)
 add_subdirectory(3rdparty)
 
 add_executable(
-    demo
-    demo.cu
+    gemm
+    gemm.cu
 )
-target_link_libraries(demo
+target_link_libraries(gemm
     CUDA::cudart
     cudnn
     cudnn_frontend
