@@ -10,14 +10,3 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(cudnn_frontend)
 
-set(CCCL_ENABLE_THRUST ON)
-set(THRUST_ENABLE_HEADER_TESTING OFF)
-set(THRUST_ENABLE_TESTING OFF)
-set(THRUST_ENABLE_EXAMPLES OFF)
-FetchContent_Declare(
-    cccl
-    GIT_REPOSITORY  https://github.com/NVIDIA/cccl.git
-    GIT_TAG         v3.0.3
-)
-FetchContent_MakeAvailable(cccl)
-

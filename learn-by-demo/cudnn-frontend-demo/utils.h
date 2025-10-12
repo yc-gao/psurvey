@@ -5,6 +5,8 @@
 #include <memory>
 #include <stdexcept>
 
+#include <cuda_runtime.h>
+
 #define COMMON_ASSERT(status, msg)   \
   {                                  \
     auto flag = status;              \
@@ -51,3 +53,30 @@ create_cudnn_handle() {
   return std::unique_ptr<cudnnHandle_t, CudnnHandleDeleter>(
       handle.release(), CudnnHandleDeleter());
 }
+
+template <typename T>
+class device_vector {
+  struct cuda_deleter {
+    void operator()(T* ptr) { cudaFree(ptr); }
+  };
+
+  std::size_t len_;
+  std::unique_ptr<T[], cuda_deleter> inner_ptr_;
+
+ public:
+  using size_type = std::size_t;
+  using value_type = T;
+  using pointer_type = T*;
+
+  device_vector() : len_(0) {}
+
+  device_vector(size_type n) : len_(n) {
+    pointer_type ptr;
+    if (cudaSuccess != cudaMalloc(&ptr, sizeof(T) * len_)) {
+      throw std::bad_alloc();
+    }
+    inner_ptr_.reset(ptr);
+  }
+
+  pointer_type data() { return inner_ptr_.get(); }
+};

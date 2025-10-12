@@ -21,7 +21,7 @@ add_subdirectory(3rdparty)
 
 add_executable(
     gemm
-    gemm.cu
+    gemm.cc
 )
 target_link_libraries(gemm
     CUDA::cudart
