@@ -6,10 +6,10 @@ macro(add_benchmark name)
     )
 endmacro()
 
-add_executable(demo demo.cu)
-target_link_libraries(demo PRIVATE
+add_benchmark(copy copy.cu)
+
+add_benchmark(cute_copy cute_copy.cu)
+target_link_libraries(cute_copy PRIVATE
     CUTLASS
 )
-
-add_benchmark(copy copy.cu)
 

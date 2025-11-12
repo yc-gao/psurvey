@@ -7,13 +7,20 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nvbench)
 
-set(CUTLASS_ENABLE_EXAMPLES OFF CACHE BOOL "Enable CUTLASS Examples")
-set(CUTLASS_ENABLE_TOOLS OFF CACHE BOOL "Enable CUTLASS Tools")
-set(CUTLASS_ENABLE_TESTS OFF CACHE BOOL "Enable CUTLASS Tests")
-FetchContent_Declare(
+include(ExternalProject)
+
+ExternalProject_Add(
     cutlass
-    GIT_REPOSITORY  https://github.com/NVIDIA/cutlass.git
-    GIT_TAG         main
+    GIT_REPOSITORY https://github.com/NVIDIA/cutlass.git
+    GIT_TAG v4.2.1
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
 )
-FetchContent_MakeAvailable(cutlass)
+
+ExternalProject_Get_property(cutlass SOURCE_DIR)
+add_library(CUTLASS INTERFACE)
+target_include_directories(CUTLASS INTERFACE
+    "${SOURCE_DIR}/include"
+)
 
