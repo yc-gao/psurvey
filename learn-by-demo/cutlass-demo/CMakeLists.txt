@@ -18,8 +18,8 @@ set(proj_COMMON_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR};${CMAKE_CURRENT_BINARY
 find_package(CUDAToolkit REQUIRED)
 add_subdirectory(3rdparty)
 
-add_executable(demo
-    demo.cu
+add_executable(copy
+    copy.cu
 )
 target_link_libraries(demo PRIVATE
     CUDA::cudart CUDA::cuda_driver
