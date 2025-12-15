@@ -21,7 +21,15 @@ add_subdirectory(3rdparty)
 add_executable(copy
     copy.cu
 )
-target_link_libraries(demo PRIVATE
+target_link_libraries(copy PRIVATE
+    CUDA::cudart CUDA::cuda_driver
+    nvidia::cutlass::cutlass
+)
+
+add_executable(gemm
+    gemm.cu
+)
+target_link_libraries(gemm PRIVATE
     CUDA::cudart CUDA::cuda_driver
     nvidia::cutlass::cutlass
 )

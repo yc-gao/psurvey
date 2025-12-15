@@ -27,6 +27,9 @@ class device_vector {
     }
     ptr_.reset(ptr);
   }
+  device_vector(const std::vector<T>& other) : device_vector(other.size()) {
+    From(other);
+  }
 
   size_type size() const { return len_; }
 
