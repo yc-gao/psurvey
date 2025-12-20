@@ -13,6 +13,9 @@ set(CMAKE_CXX_FLAGS "-pipe")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
+set(CMAKE_CUDA_ARCHITECTURES "80;90" CACHE STRING "The SM architectures to build code for.")
+set(CMAKE_CUDA_FLAGS "--extended-lambda --expt-relaxed-constexpr")
+
 set(proj_COMMON_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR};${CMAKE_CURRENT_BINARY_DIR}")
 
 find_package(CUDAToolkit REQUIRED)
