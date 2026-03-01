@@ -1,9 +1,9 @@
-export default function Home() {
-  return <>
-    {/* nav bar */}
-    <div className="container mx-auto p-4 flex justify-between items-center">
-      <div>demo0</div>
-      <div>demo1</div>
-    </div>
-  </>
+import { Button } from '@/components/ui/Button'
+
+export default function Page() {
+  return <div>
+    <Button>button default</Button>
+    <Button variant="primary">button primary</Button>
+    <Button variant="secondary" size="lg">button secondary</Button>
+  </div>
 }
